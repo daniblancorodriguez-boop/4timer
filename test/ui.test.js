@@ -209,14 +209,14 @@ const www = path.join(__dirname, '..', 'www');
 
   await go('#/'); await go('#/presets/partners'); click($('[data-prun="p3"]')); await tick(80);   // For Time
   offset += 754000; await tick(80);
-  click($('#finish')); await tick(100);
+  click($('#finish')); await tick(40); assert.ok($('#leave-sheet')); click($('#lv-exit')); await tick(100);
   assert.ok(/Compartir/.test($('#pause').textContent));
   click($('#pause')); await tick(60);
   o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'time'); assert.ok(Math.abs(o.r.value - 754) <= 2, 'tiempo realizado ' + o.r.value);
   assert.strictEqual(o.r.modeName, 'FOR TIME');
   await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(80);   // EMOM 12'
-  offset += 200000; await tick(80); click($('#finish')); await tick(100); click($('#pause')); await tick(60);
+  offset += 200000; await tick(80); click($('#finish')); await tick(40); click($('#lv-exit')); await tick(100); click($('#pause')); await tick(60);
   o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'text'); assert.strictEqual(o.r.value, "EMOM 12'"); assert.strictEqual(o.r.lines.length, 3);
   assert.ok(!/\d\d:\d\d/.test(JSON.stringify(o.r)), 'el EMOM no muestra tiempo');

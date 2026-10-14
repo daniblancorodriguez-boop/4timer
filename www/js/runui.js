@@ -527,16 +527,16 @@
       Sound.play('end'); K().go('#/running/result');
     }
     $('#main').addEventListener('click', togglePause);
-    $('#finish').addEventListener('click', finish);
+    $('#finish').addEventListener('click', function () { if (phase === 'run' || phase === 'paused') askLeave('#/running', true); });
     /* Atrás / flecha con la carrera en marcha: seguir, terminar y guardar, o salir sin guardar */
-    function askLeave(target) {
+    function askLeave(target, fin) {
       if (document.getElementById('leave-sheet')) return;
       var back = document.createElement('div');
       back.className = 'sheet-back'; back.id = 'leave-sheet';
-      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Salir de la carrera"><h2>¿Salir de la carrera?</h2><p>La carrera sigue en marcha. Si sales sin guardar, se pierde.</p>' +
+      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Salir de la carrera"><h2>' + (fin ? '¿Terminar la carrera?' : '¿Salir de la carrera?') + '</h2><p>' + (fin ? 'Se guardará con su resultado y su recorrido, o puedes descartarla.' : 'La carrera sigue en marcha. Si sales sin guardar, se pierde.') + '</p>' +
         '<button class="btn primary block" id="lv-stay">Seguir corriendo</button>' +
         '<button class="btn block" id="lv-save" style="margin-top:10px">Terminar y guardar</button>' +
-        '<button class="btn danger block" id="lv-exit" style="margin-top:10px">Salir sin guardar</button></div>';
+        '<button class="btn danger block" id="lv-exit" style="margin-top:10px">' + (fin ? 'Descartar carrera' : 'Salir sin guardar') + '</button></div>';
       document.body.appendChild(back);
       back.addEventListener('click', function (e) {
         var t = e.target;

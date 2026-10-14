@@ -726,26 +726,31 @@
     }
     $('#pause').addEventListener('click', togglePause);
     $('#reset').addEventListener('click', function () { reset(); tick(); });
-    $('#finish').addEventListener('click', function () {
+    function doFinish(at) {
       if (finished) return;
-      var cur = T.stateAt(plan, prep, elapsed());
-      if (cur.phase === 'prep') { runGuard = null; go('#/'); return; }
-      frozen = elapsed(); pausedAt = null; run.classList.remove('paused');
+      frozen = at; pausedAt = null; run.classList.remove('paused');
       Sound.cancelAll();
       if (plan.kind === 'up') Sound.play('end');
       tick();
+    }
+    $('#finish').addEventListener('click', function () {
+      if (finished) return;
+      var at = elapsed(), cur = T.stateAt(plan, prep, at);
+      if (cur.phase === 'prep') { runGuard = null; go('#/'); return; }
+      askLeave('#/', { finish: at });
     });
     /* Salir del entreno: seguir, pausar y guardar para retomar, o salir del todo */
-    function askLeave(target) {
+    function askLeave(target, opt) {
+      var fin = opt && opt.finish !== undefined;
       if (finished) { runGuard = null; go(target || '#/'); return; }
       if (document.getElementById('leave-sheet')) return;
       var back = document.createElement('div');
       back.className = 'sheet-back'; back.id = 'leave-sheet';
-      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Salir del entreno"><h2>¿Salir del entreno?</h2>' +
-        '<p>El reloj sigue corriendo. Puedes pausarlo y guardarlo para retomarlo después desde la pantalla principal.</p>' +
+      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Salir del entreno"><h2>' + (fin ? '¿Terminar el entreno?' : '¿Salir del entreno?') + '</h2>' +
+        '<p>' + (fin ? 'Se detendrá el reloj y verás tu resultado. También puedes pausarlo y guardarlo para retomarlo después.' : 'El reloj sigue corriendo. Puedes pausarlo y guardarlo para retomarlo después desde la pantalla principal.') + '</p>' +
         '<button class="btn primary block" id="lv-stay">Seguir entrenando</button>' +
         '<button class="btn block" id="lv-save" style="margin-top:10px">Pausar y guardar para retomar</button>' +
-        '<button class="btn danger block" id="lv-exit" style="margin-top:10px">Salir del entreno</button></div>';
+        '<button class="btn danger block" id="lv-exit" style="margin-top:10px">' + (fin ? 'Terminar entreno' : 'Salir del entreno') + '</button></div>';
       document.body.appendChild(back);
       back.addEventListener('click', function (e) {
         var t = e.target;
@@ -753,7 +758,7 @@
         if (t.closest('#lv-save')) {
           Store.saveSession({ pending: JSON.parse(JSON.stringify({ mode: pending.mode, cfg: pending.cfg, name: pending.name, lines: pending.lines || [], numbered: !!pending.numbered, presetId: pending.presetId || '' })), elapsed: Math.max(0, Math.round(elapsed())), rounds: rounds || 0, ts: Date.now() });
           back.remove(); runGuard = null; go('#/'); toast('Entreno guardado: retómalo desde la pantalla principal');
-        } else if (t.closest('#lv-exit')) { back.remove(); runGuard = null; go(target || '#/'); }
+        } else if (t.closest('#lv-exit')) { back.remove(); if (fin) doFinish(opt.finish); else { runGuard = null; go(target || '#/'); } }
       });
     }
     armGuard(askLeave);

@@ -47,7 +47,7 @@ const www = path.join(__dirname, '..', 'www');
   const pausedInfo = $('#rg-info').textContent; offset += 30000; await tick(300);
   click($('#main')); await tick(100);              // seguir
   await ADV(10, 3);
-  click($('#finish')); await tick(80);
+  click($('#finish')); await tick(40); assert.ok($('#lv-save')); click($('#lv-save')); await tick(80);
   assert.strictEqual(w.location.hash, '#/running/result');
   const h = w.Store.history().filter(x => x.modeId === 'run')[0];
   assert.ok(h, 'guardada en el historial');
@@ -101,7 +101,7 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok(!/Terminado/.test($('#st-lvl').textContent));
   await ADV(520, 4);    // 8080 m
   assert.ok(/Terminado/.test($('#st-lvl').textContent), 'distancia completada');
-  click($('#finish')); await tick(80);
+  click($('#finish')); await tick(40); click($('#lv-save')); await tick(80);
   const h2 = w.Store.history().filter(x => x.modeId === 'run').pop();
   assert.ok(h2.progKey === 'g1|0|1' && h2.distance > 8000);
   await go('#/running/program/g1'); assert.ok($('.chip.done'), 'parte marcada como hecha');
