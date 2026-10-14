@@ -1,0 +1,25 @@
+{
+  "name": "4timer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4TIMER — temporizador para CrossFit y entrenamiento funcional",
+  "scripts": {
+    "test": "node test/timer.test.js && node test/fit.test.js && node test/run.test.js && node test/ui.test.js && node test/runui.test.js",
+    "serve": "python3 -m http.server 8080 --directory www",
+    "android:init": "npx cap add android && npx cap sync android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.0",
+    "@capacitor-community/background-geolocation": "^1.2.26"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}

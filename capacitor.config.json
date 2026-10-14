@@ -1,0 +1,7 @@
+{
+  "appId": "es.fourtime.timer",
+  "appName": "4TIMER",
+  "webDir": "www",
+  "backgroundColor": "#050506",
+  "android": { "allowMixedContent": false }
+}

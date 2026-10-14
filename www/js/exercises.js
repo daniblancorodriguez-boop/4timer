@@ -1,0 +1,46 @@
+/* 4TIMER — ejercicios de serie con su explicación en español.
+   Se cargan la primera vez; después se pueden editar, borrar y añadir más desde la app. */
+(function (root) {
+  'use strict';
+  root.SEED_EXERCISES = [
+    { id: 'sled-push', name: 'Sled push', desc: 'Empujar un trineo cargado con peso por el suelo, con el cuerpo inclinado hacia delante y pasos potentes. Trabaja piernas, glúteos y core.' },
+    { id: 'sled-pull', name: 'Sled pull', desc: 'Arrastrar un trineo hacia ti, tirando de una cuerda con las manos o caminando hacia atrás con un arnés. Trabaja espalda, agarre y piernas.' },
+    { id: 'floor-press', name: 'Floor press', desc: 'Press de pecho tumbado en el suelo con mancuernas o barra. Al tocar el suelo con los codos se limita el recorrido y se cuidan los hombros.' },
+    { id: 'ring-row', name: 'Ring row', desc: 'Remo invertido en anillas: colgado de ellas con el cuerpo recto e inclinado, llevas el pecho hacia las anillas. Cuanto más horizontal está el cuerpo, más difícil es.' },
+    { id: 'wallclimbs', name: 'Wallclimbs', desc: 'Desde posición de plancha con los pies en la pared, subes caminando con los pies por la pared mientras las manos se acercan a ella, y vuelves a bajar. Trabaja hombros y core.' },
+    { id: 'db-push-press', name: 'Dual DB push press', desc: 'Empuje sobre la cabeza con dos mancuernas: flexionas ligeramente las rodillas y usas el impulso de las piernas para subir las pesas hasta extender los brazos.' },
+    { id: 'horizontal-row', name: 'Horizontal row', desc: 'Remo horizontal: tiras de una barra, mancuernas o anillas hacia el torso manteniendo la espalda recta. Trabaja espalda y bíceps.' },
+    { id: 'seated-wallballs', name: 'Seated wallballs', desc: 'Lanzamiento de un balón medicinal a la diana de la pared estando sentado, sin sentadilla. El impulso viene del tronco y los brazos. Trabaja core y hombros.' },
+    { id: 'american-swing', name: 'American swing', desc: 'Swing con kettlebell en el que la pesa sube hasta por encima de la cabeza con los brazos extendidos (en el swing ruso solo llega a la altura del pecho). El impulso viene de las caderas.' },
+    { id: 'wallballs-lunge', name: 'Wallballs lunge', desc: 'Zancada con un balón medicinal en las manos y, al subir, lanzamiento del balón a la diana de la pared. Combina piernas y hombros.' },
+    { id: 'du', name: 'DU (Double unders)', desc: 'Saltos a la comba en los que la cuerda pasa dos veces bajo los pies en cada salto. Se abrevia DU.' },
+    { id: 'shuttle-run', name: 'Shuttle run', desc: 'Carrera de ida y vuelta entre dos marcas separadas por una distancia fija (por ejemplo 12,5 m), tocando la línea en cada cambio de sentido.' },
+    { id: 'burpee-pull-ups', name: 'Burpee pull ups', desc: 'Un burpee (pecho al suelo, te levantas y saltas) seguido de saltar a una barra y hacer una dominada.' },
+    { id: 'db-hang-snatch', name: 'DB hang snatch', desc: 'Arrancada con una mancuerna: parte colgada a la altura de la cadera y, en un solo movimiento explosivo, la subes por encima de la cabeza con el brazo extendido.' },
+    { id: 'db-step-up', name: 'DB step up', desc: 'Subida a un cajón o banco con una mancuerna en cada mano: subes con una pierna, extiendes cadera y rodilla arriba y bajas de forma controlada.' },
+    { id: 'push-ups', name: 'Push ups', desc: 'Flexiones de brazos: con el cuerpo recto, bajas el pecho al suelo y empujas hasta extender los codos.' },
+    { id: 'cal-bike', name: 'Cal bike', desc: 'Bicicleta de aire (tipo assault bike) en la que el objetivo se mide en calorías en lugar de tiempo o distancia.' },
+    { id: 'run', name: 'Run', desc: 'Carrera a pie. La distancia (por ejemplo 200 m o 400 m) la pones tú a mano en cada entreno.' },
+    { id: 'burpees', name: 'Burpees', desc: 'Desde de pie, bajas al suelo hasta tocarlo con el pecho, te levantas y terminas con un salto con las manos por encima de la cabeza.' },
+    { id: 'farmer-hold', name: 'Farmer hold', desc: 'Sostener un peso pesado en cada mano, con los brazos estirados a los lados, sin caminar. Trabaja agarre, trapecios y core.' },
+    { id: 'hang-bar-hold', name: 'Hang bar hold', desc: 'Colgarte de una barra con los brazos estirados, aguantando el máximo tiempo posible. Trabaja agarre y hombros.' },
+    { id: 'lunges', name: 'Lunges', desc: 'Zancadas: das un paso largo, bajas la rodilla de atrás hacia el suelo y vuelves a subir. Se alternan las piernas o se camina.' },
+    { id: 'step-up', name: 'Step up', desc: 'Subida a un cajón o banco con una pierna y bajada controlada. Trabaja cuádriceps y glúteos.' },
+    { id: 'burpees-broad-jump-syncro', name: 'Burpees broad jump syncro', desc: 'Burpee seguido de un salto de longitud hacia delante, haciendo los movimientos a la vez que tu pareja (syncro = sincronizados).' },
+    { id: 'run-syncro', name: 'Run syncro', desc: 'Correr junto a tu pareja al mismo ritmo, saliendo y llegando a la vez (syncro = sincronizados).' },
+    { id: 'tempo-front-squat', name: 'Tempo front squat', desc: 'Sentadilla frontal (barra apoyada delante, sobre los hombros) con un tempo marcado: por ejemplo bajar despacio, pausar abajo y subir con control.' },
+    { id: 'iso-pull-ups', name: 'ISO 90º pull ups', desc: 'Isométrico de dominada: te mantienes con los codos flexionados a unos 90º, sin subir ni bajar, el máximo tiempo posible.' },
+    { id: 'db-bench-row', name: 'DB bench row', desc: 'Remo con mancuerna apoyando el pecho, o una mano y una rodilla, sobre un banco; tiras de la mancuerna hacia la cadera. Se suele indicar por lado (por ejemplo 6+6).' },
+    { id: 'back-squat', name: 'Back squat', desc: 'Sentadilla trasera: con la barra apoyada en la parte alta de la espalda, bajas flexionando cadera y rodillas y subes. Trabaja piernas y glúteos.' },
+    { id: 'sprint-bike', name: 'Sprint bike', desc: 'Sprint en bicicleta de aire a máxima intensidad durante el tiempo indicado.' },
+    { id: 'sprint-ski', name: 'Sprint ski', desc: 'Sprint en la máquina de esquí (SkiErg) a máxima intensidad durante el tiempo indicado.' },
+    { id: 'ski', name: 'Ski', desc: 'SkiErg: máquina que simula el esquí de fondo; tiras de dos asas hacia abajo con brazos, espalda y core. Se mide por distancia (por ejemplo 200 m).' },
+    { id: 'strict-pull-ups', name: 'Strict pull ups', desc: 'Dominadas estrictas: subes la barbilla por encima de la barra solo con la fuerza de espalda y brazos, sin balanceo ni impulso.' },
+    { id: 'triceps-band-ext', name: 'Triceps band ext', desc: 'Extensión de tríceps con banda elástica: con la banda anclada en alto, estiras los codos hacia abajo manteniendo los brazos pegados al cuerpo.' },
+    { id: 'hip-thrust', name: 'Hip thrust', desc: 'Empuje de cadera: con la espalda alta apoyada en un banco y una barra o peso sobre la cadera, subes la pelvis hasta alinear rodillas, cadera y hombros. Trabaja glúteos.' },
+    { id: 'strict-t2b', name: 'Strict T2B', desc: 'Toes to bar estricto: colgado de la barra, subes los pies hasta tocarla sin balanceo ni impulso. Trabaja abdomen y agarre.' },
+    { id: 'slow-push-ups', name: 'Slow push ups', desc: 'Flexiones lentas: bajas y subes de forma controlada y despacio para aumentar el tiempo bajo tensión.' },
+    { id: 'kip-pull-ups', name: 'Kip pull ups', desc: 'Dominadas con kipping: te ayudas de un balanceo del cuerpo para subir la barbilla sobre la barra. Permite hacer más repeticiones que las estrictas.' },
+    { id: 'rest', name: 'Rest', desc: 'Descanso: tiempo sin hacer ejercicio dentro del minuto o del intervalo.' }
+  ];
+})(window);
