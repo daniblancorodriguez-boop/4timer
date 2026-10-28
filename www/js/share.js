@@ -28,7 +28,7 @@
     ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
-  function imgSize(img) { return { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }; }
+  function imgSize(img) { return { w: img.naturalWidth || img.videoWidth || img.width, h: img.naturalHeight || img.videoHeight || img.height }; }
   function cover(ctx, img, x, y, w, h) {
     var s = imgSize(img), k = Math.max(w / s.w, h / s.h), dw = s.w * k, dh = s.h * k;
     ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
@@ -104,9 +104,9 @@
     return w;
   }
   function background(ctx, o, W, H) {
-    ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-    if (o.photo) {
-      cover(ctx, o.photo, 0, 0, W, H);
+    if (!o.overlay) { ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H); }
+    if (o.photo || o.overlay) {
+      if (!o.overlay) cover(ctx, o.photo, 0, 0, W, H);
       var top = ctx.createLinearGradient(0, 0, 0, 360); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = top; ctx.fillRect(0, 0, W, 360);
       var bot = ctx.createLinearGradient(0, H * 0.3, 0, H); bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(0.55, 'rgba(0,0,0,.78)'); bot.addColorStop(1, 'rgba(0,0,0,.93)');
@@ -306,7 +306,124 @@
     download(new Blob([text], { type: mime || 'text/plain' }), name);
     return Promise.resolve('saved');
   }
-  function save(canvas) { return toBlob(canvas).then(function (b) { download(b, '4timer-entreno.png'); return 'saved'; }); }
+  /* Guardar imagen: en el móvil va a la galería (álbum «4TIMER»); en el navegador se descarga. */
+  function saveGallery(dataUrl, video) {
+    var P = root.Capacitor && root.Capacitor.Plugins, M = P && P.Media;
+    if (!M) return Promise.reject(new Error('no-media'));
+    function put(album) {
+      var o = { path: dataUrl, fileName: '4timer-' + Date.now() };
+      if (album) o.albumIdentifier = album;
+      return video ? M.saveVideo(o) : M.savePhoto(o);
+    }
+    return Promise.resolve().then(function () { return M.createAlbum({ name: '4TIMER' }); }).catch(function () {})
+      .then(function () { return M.getAlbums(); })
+      .then(function (r) { var a = (r && r.albums || []).filter(function (x) { return x.name === '4TIMER'; })[0]; return a ? a.identifier : null; })
+      .catch(function () { return null; })
+      .then(function (id) { return put(id).catch(function () { return put(null); }); });
+  }
+  function native() { var c = root.Capacitor; return !!(c && c.isNativePlatform && c.isNativePlatform() && c.Plugins && c.Plugins.Media); }
+  function save(canvas) {
+    if (native()) {
+      return saveGallery(canvas.toDataURL('image/png'), false).then(function () { return 'gallery'; }).catch(function () { return 'error'; });
+    }
+    return toBlob(canvas).then(function (b) { download(b, '4timer-entreno.png'); return 'saved'; });
+  }
 
-  root.Share = { FORMATS: FORMATS, render: render, share: share, save: save, file: file, fmt: fmt };
+
+  /* ---------- Vídeo: el vídeo del usuario de fondo + la tarjeta (logo, resultado, ejercicios) encima ---------- */
+  var VMIMES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  function videoMime() {
+    var MR = root.MediaRecorder;
+    if (!MR || !MR.isTypeSupported) return null;
+    for (var i = 0; i < VMIMES.length; i++) if (MR.isTypeSupported(VMIMES[i])) return VMIMES[i];
+    return null;
+  }
+  function videoSupported() { return !!(videoMime() && root.HTMLCanvasElement && root.HTMLCanvasElement.prototype.captureStream); }
+  /* Capa con todo menos el fondo (transparente donde va el vídeo) */
+  function renderOverlay(o) {
+    var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k];
+    o2.overlay = true; o2.photo = null;
+    return render(c, o2).then(function () { return c; });
+  }
+  /* Graba el vídeo con la tarjeta encima. opts: { onProgress(0..1), maxSec } → Promise<{blob, mime, ext}> */
+  function recordVideo(o, video, opts) {
+    opts = opts || {};
+    var mime = videoMime();
+    if (!mime) return Promise.reject(new Error('sin-soporte'));
+    return renderOverlay(o).then(function (ov) {
+      return new Promise(function (resolve, reject) {
+        var scale = Math.min(1, 1280 / Math.max(ov.width, ov.height)), W = Math.round(ov.width * scale), H = Math.round(ov.height * scale);
+        var cv = root.document.createElement('canvas'); cv.width = W; cv.height = H;
+        var ctx = cv.getContext('2d'), dur = Math.min(video.duration || 60, opts.maxSec || 60);
+        var stream = cv.captureStream(30), rec, chunks = [], done = false, raf = 0;
+        try {                                                   // audio del vídeo sin que suene por el altavoz (una sola vez por elemento)
+          var AC = root.AudioContext || root.webkitAudioContext;
+          if (AC) {
+            if (!video.__dest) { var ac0 = new AC(); video.__dest = ac0.createMediaStreamDestination(); ac0.createMediaElementSource(video).connect(video.__dest); video.__ac = ac0; }
+            if (video.__ac.state === 'suspended') video.__ac.resume();
+            video.__dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
+          }
+        } catch (e) {}
+        function finish(err) {
+          if (done) return; done = true; cancelAnimationFrame(raf);
+          try { video.pause(); } catch (e) {}
+          if (err) reject(err);
+        }
+        try { rec = new root.MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4000000 }); } catch (e) { return reject(e); }
+        rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onerror = function (e) { finish(e.error || new Error('grabacion')); };
+        rec.onstop = function () {
+          if (done && !chunks.length) return;
+          var m = mime.split(';')[0]; done = true;
+          resolve({ blob: new Blob(chunks, { type: m }), mime: m, ext: m.indexOf('mp4') >= 0 ? 'mp4' : 'webm' });
+        };
+        function frame() {
+          ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
+          if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
+          ctx.drawImage(ov, 0, 0, W, H);
+          if (opts.onProgress) opts.onProgress(Math.min(1, video.currentTime / dur));
+          if (video.ended || video.currentTime >= dur - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
+          raf = root.requestAnimationFrame(frame);
+        }
+        function go() {
+          rec.start(500);
+          var pl = video.play();
+          function begin() { raf = root.requestAnimationFrame(frame); }
+          if (pl && pl.then) pl.then(begin, function () { video.muted = true; video.play().then(begin, function (e) { finish(e); try { rec.stop(); } catch (x) {} }); });
+          else begin();
+        }
+        video.muted = false; video.currentTime = 0;
+        var started = false; function once() { if (started) return; started = true; video.removeEventListener('seeked', once); go(); }
+        video.addEventListener('seeked', once); setTimeout(once, 600);
+      });
+    });
+  }
+  function blobB64(blob) {
+    return new Promise(function (res, rej) { var f = new root.FileReader(); f.onload = function () { res(String(f.result).split(',')[1]); }; f.onerror = rej; f.readAsDataURL(blob); });
+  }
+  /* Guarda el vídeo en la galería (móvil) o lo descarga (navegador): 'gallery' | 'saved' | 'error' */
+  function saveVideo(v) {
+    var name = '4timer-entreno.' + v.ext, cap = root.Capacitor, P = cap && cap.Plugins;
+    if (native() && P.Filesystem) {
+      return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: name, data: b64, directory: 'CACHE' }); })
+        .then(function (f) { return saveGallery(f.uri, true); }).then(function () { return 'gallery'; }).catch(function () { return 'error'; });
+    }
+    download(v.blob, name); return Promise.resolve('saved');
+  }
+  function shareVideo(v, text) {
+    var name = '4timer-entreno.' + v.ext, cap = root.Capacitor, P = cap && cap.Plugins;
+    if (cap && cap.isNativePlatform && cap.isNativePlatform() && P && P.Filesystem && P.Share) {
+      return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: name, data: b64, directory: 'CACHE' }); })
+        .then(function (f) { return P.Share.share({ title: '4TIMER', text: text, files: [f.uri], dialogTitle: 'Compartir vídeo' }); })
+        .then(function () { return 'shared'; }).catch(function (e) { return /cancel/i.test(String(e && e.message)) ? 'cancelled' : 'error'; });
+    }
+    var file = null; try { file = new File([v.blob], name, { type: v.mime }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ files: [file], text: text }).then(function () { return 'shared'; })
+        .catch(function (e) { if (e && e.name === 'AbortError') return 'cancelled'; download(v.blob, name); return 'saved'; });
+    }
+    download(v.blob, name); return Promise.resolve('saved');
+  }
+
+  root.Share = { FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
 })(typeof window !== 'undefined' ? window : globalThis);

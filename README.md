@@ -99,3 +99,7 @@ Mientras corres aparece una notificación silenciosa y fija (se ve en la pantall
 
 ### Mapa real (opcional)
 En el resultado de una carrera y en la tarjeta de compartir se puede cambiar de «recorrido dibujado» (por defecto, sin internet y privado) a **mapa real**: teselas oscuras de CARTO con datos de OpenStreetMap, con su atribución dibujada en el mapa. Solo se descargan al pedirlo. Las teselas de CARTO son gratis para uso no comercial; si se publica con fines comerciales, cambia la URL en `www/js/map.js` (`TILE`) por la de un proveedor con licencia (MapTiler, Stadia…).
+
+## Guardar en la galería y vídeo (compartir)
+- En el móvil, «Guardar imagen» y «Guardar vídeo» van a la galería, álbum **4TIMER** (plugin `@capacitor-community/media`; tras actualizar: `npm install` y `npx cap sync android`). En el navegador se descargan.
+- Vídeo: se elige o graba un vídeo de fondo y la app lo regraba con el logo, el resultado y los ejercicios encima (hasta 60 s, con su audio) usando `MediaRecorder`. El formato (MP4 o WebM) depende del móvil.

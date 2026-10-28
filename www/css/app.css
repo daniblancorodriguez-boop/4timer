@@ -380,3 +380,6 @@ svg { overflow: visible; }
 .btn.block { white-space: normal; line-height: 1.1; }
 .rr-map { width: 100%; height: auto; border-radius: 14px; display: block; }
 .rr-loading { padding: 40px 0; text-align: center; color: var(--muted); }
+.vprog { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 21px; color: var(--muted, #aaa); }
+.vbar { height: 12px; border-radius: 6px; background: var(--panel-2); overflow: hidden; }
+.vbar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .2s linear; }
