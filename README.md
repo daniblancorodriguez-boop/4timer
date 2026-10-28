@@ -108,3 +108,6 @@ En el resultado de una carrera y en la tarjeta de compartir se puede cambiar de 
 - Logo de serie: círculo de 4TIME (`www/icons/gym-logo.png`, transparente fuera del círculo). Si subes uno propio en Ajustes, se usa el tuyo.
 - Compartir entreno: opción «Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo» (formatos Story y Post).
 - Entrenos de serie p11–p17 (parejas, EMOM par/impar, AMRAP 17', 5R For Time). Los ejemplos nuevos se añaden solos una vez a quien ya tenía la app.
+
+## Estilos de tarjeta con varias fotos (Story)
+En «Compartir entreno» hay un selector de estilo: **Normal**, **Carrete 3 + fondo** (tira de fotomatón), **Carrete 4 + 2 fondos** (película inclinada sobre dos fondos) y **Collage 3 + fondo**. Cada hueco tiene su «Hacer foto / Subir foto». Los huecos vacíos solo se ven en la vista previa; al guardar o compartir no salen. Solo en formato Story y sin lista de ejercicios.

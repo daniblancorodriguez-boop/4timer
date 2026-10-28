@@ -813,16 +813,18 @@
   }
   function viewShare(manual) {
     if (!manual && !lastResult) return go('#/');
-    var st = { format: 'story', style: 'std', photo: null, board: null, showEx: true, logo: null, type: 'fortime' };
+    var st = { layout: 'std', slots: { strip3: [], strip4: [], collage: [] }, format: 'story', style: 'std', photo: null, board: null, showEx: true, logo: null, type: 'fortime' };
     var s = Store.settings();
     app.innerHTML = '<div class="screen share-view">' + header(manual ? 'Compartir entreno' : 'Compartir', { back: '#/' }) +
       (manual ? '<p class="lead">¿Has entrenado con el reloj y la pizarra de clase? Rellena el resultado y crea tu imagen.</p>' + manualFormHtml() : '') +
       '<div class="share-prev"><canvas id="sh-canvas" aria-label="Vista previa de la imagen para compartir"></canvas></div>' +
       '<div class="seg-ctl" role="group" aria-label="Formato"><button class="btn small on" data-fmt="story">Story 9:16</button><button class="btn small" data-fmt="post">Post 4:5</button><button class="btn small" data-fmt="land">Horizontal 16:9</button></div>' +
       '<div class="seg-ctl" role="group" aria-label="Estilo del logo"><button class="btn small on" data-sty="std">Logo normal</button><button class="btn small" data-sty="logo">Logo grande</button></div>' +
-      photoBtns('sh-bg', 'Foto de fondo', true) + (window.Share.videoSupported() ? videoBtns() : '') + photoBtns('sh-bd', 'Foto de la pizarra', true) +
+      '<div class="seg-ctl" id="sh-lay" role="group" aria-label="Estilo de la tarjeta"><button class="btn small on" data-lay="std">Normal</button><button class="btn small" data-lay="strip3">Carrete 3 + fondo</button><button class="btn small" data-lay="strip4">Carrete 4 + 2 fondos</button><button class="btn small" data-lay="collage">Collage 3 + fondo</button></div>' +
+      '<div id="sh-slots" hidden></div><p class="hint" id="sh-lay-hint" hidden>Estos estilos son para Story 9:16 y llevan solo el resultado (sin lista de ejercicios).</p>' +
+      '<div id="sh-std">' + photoBtns('sh-bg', 'Foto de fondo', true) + (window.Share.videoSupported() ? videoBtns() : '') + photoBtns('sh-bd', 'Foto de la pizarra', true) +
       '<label class="chk"><input type="checkbox" id="sh-ex" checked> Mostrar ejercicios</label>' +
-      '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label>' +
+      '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label></div>' +
       (manual ? '<button class="btn block" id="sh-hist" style="margin-bottom:10px">' + ICON.history + 'Guardar en el historial</button>' : '') +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
       '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
@@ -849,15 +851,42 @@
       else { r.kind = 'text'; r.label = 'ENTRENO'; r.value = (name || 'WOD').toUpperCase(); r.sub = 'Entreno completado'; r.name = name || 'Entreno'; }
       return r;
     }
-    function opts() {
+    function opts(final) {
       if (manual) res = buildManual();
       var rd = isRun ? window.RunUI.shareModel(res, st.hide) : res;
-      return { format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
+      var lay = (!isRun && st.format === 'story') ? st.layout : 'std';
+      return { layout: lay, imgs: st.slots[lay] || [], placeholders: !final, format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
     }
-    function draw() {
+    function draw(final) {
       var my = ++seq;
-      return window.Share.render(canvas, opts()).then(function () { return my; });
+      return window.Share.render(canvas, opts(final)).then(function () { return my; });
     }
+    /* Estilos con varias fotos: un hueco por foto */
+    function buildSlots() {
+      var box = $('#sh-slots'), names = window.Share.LAYOUT_SLOTS[st.layout];
+      box.hidden = !names; $('#sh-lay-hint').hidden = !names; $('#sh-std').hidden = !!names;
+      if (!names) { box.innerHTML = ''; return; }
+      box.innerHTML = names.map(function (n, i) { return photoBtns('sh-s' + i, n, true); }).join('');
+      names.forEach(function (n, i) {
+        var arr = st.slots[st.layout], rm = $('#sh-s' + i + '-rm'); rm.hidden = !arr[i];
+        ['cam', 'gal'].forEach(function (k) {
+          $('#sh-s' + i + '-' + k).addEventListener('change', function (e) {
+            var file = e.target.files[0]; e.target.value = ''; if (!file) return;
+            var url = URL.createObjectURL(file);
+            loadImg(url).then(function (img) { URL.revokeObjectURL(url); if (!img) { toast('No se pudo abrir esa imagen'); return; } arr[i] = img; rm.hidden = false; draw(); });
+          });
+        });
+        rm.addEventListener('click', function () { arr[i] = null; rm.hidden = true; draw(); });
+      });
+    }
+    function setLayout(l) {
+      st.layout = l;
+      if (l !== 'std' && st.format !== 'story') { st.format = 'story'; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x.dataset.fmt === 'story'); }); }
+      $$('[data-lay]').forEach(function (x) { x.classList.toggle('on', x.dataset.lay === l); });
+      buildSlots(); var vb = $('#sh-vid-box'); if (vb) vb.hidden = l !== 'std' || !st.video; draw();
+    }
+    $$('[data-lay]').forEach(function (b) { b.addEventListener('click', function () { setLayout(b.dataset.lay); }); });
+    if (isRun) $('#sh-lay').hidden = true;
     loadImg(logoSrc()).then(function (img) { if (img && !Store.settings().logo) img.__round = true; st.logo = img; draw(); });
     draw();
     function wirePhoto(id, key) {
@@ -922,6 +951,7 @@
     $$('[data-fmt]').forEach(function (b) {
       b.addEventListener('click', function () {
         st.format = b.dataset.fmt;
+        if (st.format !== 'story' && st.layout !== 'std') { st.layout = 'std'; $$('[data-lay]').forEach(function (x) { x.classList.toggle('on', x.dataset.lay === 'std'); }); buildSlots(); }
         $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === b); });
         draw();
       });
@@ -952,12 +982,13 @@
     });
     function text() { if (isRun) return window.RunUI.shareText(res); return res.kind === 'rounds' ? res.value + ' rondas · ' + res.name : res.kind === 'time' ? res.name + ' · ' + T.fmt(res.value) : res.name; }
     $('#sh-share').addEventListener('click', function () {
-      draw().then(function () { return window.Share.share(canvas, text() + ' #4TIMER'); }).then(function (r) {
+      draw(true).then(function () { return window.Share.share(canvas, text() + ' #4TIMER'); }).then(function (r) {
+        draw();
         if (r === 'saved') toast('Imagen guardada. Ya puedes subirla a Instagram');
         else if (r === 'error') toast('No se pudo compartir');
       });
     });
-    $('#sh-save').addEventListener('click', function () { draw().then(function () { return window.Share.save(canvas); }).then(function (r) { toast(r === 'gallery' ? 'Imagen guardada en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar. Prueba con «Compartir»' : 'Imagen descargada en la carpeta de descargas'); }); });
+    $('#sh-save').addEventListener('click', function () { draw(true).then(function () { return window.Share.save(canvas); }).then(function (r) { draw(); toast(r === 'gallery' ? 'Imagen guardada en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar. Prueba con «Compartir»' : 'Imagen descargada en la carpeta de descargas'); }); });
   }
 
   /* ---------- Historial ---------- */

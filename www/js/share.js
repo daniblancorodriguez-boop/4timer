@@ -103,7 +103,69 @@
     ctx.fillStyle = '#04200d'; ctx.fillText(t, x + 22, y + 42);
     return w;
   }
+
+  /* ---------- Estilos con varias fotos (solo Story): carrete + fondo, 2 fondos, collage ----------
+     o.layout: 'std' | 'strip3' | 'strip4' | 'collage'  ·  o.imgs: fotos por hueco  ·  o.placeholders: dibuja los huecos vacíos (solo en la vista previa) */
+  var LAYOUT_SLOTS = {
+    strip3: ['Fondo', 'Carrete 1', 'Carrete 2', 'Carrete 3'],
+    strip4: ['Fondo arriba', 'Fondo abajo', 'Carrete 1', 'Carrete 2', 'Carrete 3', 'Carrete 4'],
+    collage: ['Fondo', 'Foto 1', 'Foto 2', 'Foto 3']
+  };
+  function layOf(o, W, H) { return (o.layout && LAYOUT_SLOTS[o.layout] && W < H && H > 1500) ? o.layout : null; }
+  function placeholder(ctx, x, y, w, h, label, r) {
+    ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.fillStyle = '#2b2b30'; ctx.fill();
+    ctx.setLineDash([14, 12]); ctx.lineWidth = 3; ctx.strokeStyle = '#5b5b63'; ctx.stroke(); ctx.setLineDash([]);
+    var cx = x + w / 2, cy = y + h / 2, rad = Math.max(18, Math.min(46, Math.min(w, h) * 0.16));
+    ctx.fillStyle = '#5a5a5f'; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(3, rad / 6); ctx.beginPath(); ctx.moveTo(cx - rad * .45, cy); ctx.lineTo(cx + rad * .45, cy); ctx.moveTo(cx, cy - rad * .45); ctx.lineTo(cx, cy + rad * .45); ctx.stroke();
+    ctx.fillStyle = '#9b9ba3'; ctx.font = '700 ' + Math.max(22, Math.min(34, Math.round(h * 0.12))) + 'px ' + F; ctx.textAlign = 'center'; ctx.fillText(label, cx, cy + rad + 40); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  function slot(ctx, o, img, x, y, w, h, label, r) {
+    if (img) { ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.clip(); cover(ctx, img, x, y, w, h); ctx.restore(); }
+    else if (o.placeholders) placeholder(ctx, x, y, w, h, label, r);
+  }
+  function artLayout(ctx, o, lay, x0, top, cw, bottom) {
+    var im = o.imgs || [], R = bottom - top, i, k;
+    if (lay === 'strip3') {                                   // tira de fotomatón, a la derecha y ligeramente girada
+      var gp = 16, pg = 24, fh = Math.floor((R - 2 * pg - 2 * gp - 40) / 3), fw = Math.round(fh * 1.4), sw = fw + 2 * pg, sh = 3 * fh + 2 * gp + 2 * pg + 40;
+      ctx.save(); ctx.translate(x0 + cw - sw / 2 - 8, top + R / 2); ctx.rotate(0.05);
+      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 12; ctx.fillStyle = '#efeee9'; rr(ctx, -sw / 2, -sh / 2, sw, sh, 8); ctx.fill(); ctx.shadowColor = 'transparent';
+      for (i = 0; i < 3; i++) slot(ctx, o, im[1 + i], -fw / 2, -sh / 2 + pg + i * (fh + gp), fw, fh, 'Carrete ' + (i + 1), 2);
+      ctx.fillStyle = '#6a6a66'; ctx.font = '700 italic 26px ' + F; ctx.textAlign = 'center'; ctx.fillText('4TIME · 4TIMER', 0, sh / 2 - 16); ctx.textAlign = 'left';
+      ctx.restore();
+    } else if (lay === 'strip4') {                            // carrete de película inclinado, a la izquierda
+      var gp4 = 14, pg4 = 30, sh4 = R + 40, fh4 = Math.floor((sh4 - 3 * gp4 - 2 * pg4) / 4), fw4 = Math.round(fh4 * 1.2), sw4 = fw4 + 2 * 38;
+      ctx.save(); ctx.translate(x0 + sw4 / 2 + 6, top + R / 2 - 10); ctx.rotate(-0.15);
+      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 10; ctx.fillStyle = '#0b0b0c'; ctx.fillRect(-sw4 / 2, -sh4 / 2, sw4, sh4); ctx.shadowColor = 'transparent';
+      ctx.fillStyle = 'rgba(230,229,222,.9)';
+      for (k = -sh4 / 2 + 14; k < sh4 / 2 - 22; k += 40) { rr(ctx, -sw4 / 2 + 9, k, 20, 24, 5); ctx.fill(); rr(ctx, sw4 / 2 - 29, k, 20, 24, 5); ctx.fill(); }
+      for (i = 0; i < 4; i++) slot(ctx, o, im[2 + i], -fw4 / 2, -sh4 / 2 + pg4 + i * (fh4 + gp4), fw4, fh4, 'Carrete ' + (i + 1), 3);
+      ctx.restore();
+    } else if (lay === 'collage') {                           // tres fotos principales solapadas sobre la de fondo
+      var ph = Math.round(R * 0.54), pw = Math.round(ph * 0.75), bw = 9;
+      var card = function (x, y, a, img, label, white) {
+        ctx.save(); ctx.translate(x + pw / 2, y + ph / 2); ctx.rotate(a);
+        ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8; ctx.fillStyle = white ? '#f4f3ee' : '#111'; ctx.fillRect(-pw / 2 - bw, -ph / 2 - bw, pw + 2 * bw, ph + 2 * bw); ctx.shadowColor = 'transparent';
+        slot(ctx, o, img, -pw / 2, -ph / 2, pw, ph, label, 0); ctx.restore();
+      };
+      card(x0 + cw - pw - 6, top + 4, 0.025, im[1], 'Foto 1', false);
+      card(x0 + cw * 0.34 - pw / 2 + 40, top + R * 0.30, -0.02, im[2], 'Foto 2', true);
+      card(x0 + cw - pw - 30, top + R - ph - 4, 0.02, im[3], 'Foto 3', false);
+    }
+  }
+
   function background(ctx, o, W, H) {
+    var lay = layOf(o, W, H);
+    if (lay) {
+      ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
+      var im0 = (o.imgs || [])[0], im1 = (o.imgs || [])[1];
+      if (lay === 'strip4') { slot(ctx, o, im0, 0, 0, W, H / 2, 'Fondo arriba', 0); slot(ctx, o, im1, 0, H / 2, W, H / 2, 'Fondo abajo', 0); }
+      else slot(ctx, o, im0, 0, 0, W, H, 'Fondo', 0);
+      var tp = ctx.createLinearGradient(0, 0, 0, 360); tp.addColorStop(0, 'rgba(0,0,0,.65)'); tp.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tp; ctx.fillRect(0, 0, W, 360);
+      var bt = ctx.createLinearGradient(0, H * 0.45, 0, H); bt.addColorStop(0, 'rgba(0,0,0,0)'); bt.addColorStop(0.5, 'rgba(0,0,0,.78)'); bt.addColorStop(1, 'rgba(0,0,0,.94)'); ctx.fillStyle = bt; ctx.fillRect(0, H * 0.45, W, H * 0.55);
+      return;
+    }
     if (!o.overlay) { ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H); }
     if (o.photo || o.overlay) {
       if (!o.overlay) cover(ctx, o.photo, 0, 0, W, H);
@@ -238,8 +300,10 @@
       }
 
       // ================= VERTICAL (story / post) =================
+      var lay = layOf(o, W, H);
+      if (lay) { exAll = []; hasBoard = false; }          // estilos con fotos: solo marcador, sin lista ni pizarra
       var exTop = !!o.exTop && exAll.length > 0;      // ejercicios arriba a la izquierda (semitransparentes); el marcador baja al fondo
-      var u = (hasBoard && H < 1500) ? 1.9 : 2.6, digitsH = 96 * u, statH = 56 + digitsH + 44, subH = 64, footerH = 70;
+      var u = ((hasBoard && H < 1500) || lay) ? 1.9 : 2.6, digitsH = 96 * u, statH = 56 + digitsH + 44, subH = 64, footerH = 70;
       var titleFont = '800 italic 98px ' + F;
       ctx.font = titleFont;
       var titleLines = wrap(ctx, r.name, cw, 2), titleH = titleLines.length * 100 + 14;
@@ -274,6 +338,7 @@
         ctx.restore();
       }
 
+      if (lay) artLayout(ctx, o, lay, pad, topLimit, cw, y - 28);
       chip(y); y += chipH + gap / 2;
       ctx.font = titleFont; ctx.fillStyle = '#fff';
       titleLines.forEach(function (t, i) { ctx.fillText(t, pad, y + 88 + i * 100); });
@@ -447,5 +512,5 @@
     download(v.blob, name); return Promise.resolve('saved');
   }
 
-  root.Share = { FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
+  root.Share = { LAYOUT_SLOTS: LAYOUT_SLOTS, FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
 })(typeof window !== 'undefined' ? window : globalThis);
