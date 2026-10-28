@@ -175,11 +175,13 @@
       background(ctx, o, W, H);
 
       // ----- fila superior: logo del gimnasio (izq.) y marca 4TIMER (dcha.) -----
-      var logoH = big ? (land ? 220 : 300) : (land ? 112 : 132), logoMaxW = big ? (land ? 620 : 600) : 400, wm = big ? 66 : (land ? 80 : 92);
+      var round = !!(o.logo && o.logo.__round);                      // logo circular de serie: sin fondo ni recorte rectangular
+      var logoH = (big ? (land ? 220 : 300) : (land ? 112 : 132)) * (round ? 1.18 : 1), logoMaxW = big ? (land ? 620 : 600) : 400, wm = big ? 66 : (land ? 80 : 92);
       if (o.logo) {
         var ls = imgSize(o.logo), k = Math.min(logoMaxW / ls.w, logoH / ls.h), lw = ls.w * k, lh = ls.h * k;
-        ctx.save(); rr(ctx, pad, pad, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(pad, pad, lw, lh);
-        ctx.drawImage(o.logo, pad, pad, lw, lh); ctx.restore();
+        if (round) ctx.drawImage(o.logo, pad, pad, lw, lh);
+        else { ctx.save(); rr(ctx, pad, pad, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(pad, pad, lw, lh);
+        ctx.drawImage(o.logo, pad, pad, lw, lh); ctx.restore(); }
       } else if (o.gymName) {
         ctx.font = '800 italic ' + (big ? 96 : 64) + 'px ' + F; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(o.gymName, pad, pad + (big ? 110 : 70));
       }
@@ -236,6 +238,7 @@
       }
 
       // ================= VERTICAL (story / post) =================
+      var exTop = !!o.exTop && exAll.length > 0;      // ejercicios arriba a la izquierda (semitransparentes); el marcador baja al fondo
       var u = (hasBoard && H < 1500) ? 1.9 : 2.6, digitsH = 96 * u, statH = 56 + digitsH + 44, subH = 64, footerH = 70;
       var titleFont = '800 italic 98px ' + F;
       ctx.font = titleFont;
@@ -244,13 +247,32 @@
       var room = H - pad - topLimit - fixed - gap;
       var boardMin = hasBoard ? (H > 1500 ? 560 : 400) : 0;
       var maxEx = Math.max(0, Math.min(9, Math.floor((room - boardMin) / lineH)));
+      if (exTop) maxEx = 0;
       var shown = exAll.slice(0, maxEx), more = exAll.length - shown.length;
       if (more > 0 && shown.length) { shown = shown.slice(0, shown.length - 1); more = exAll.length - shown.length; }
       if (!shown.length || (hasBoard && more > 0 && shown.length < 2)) { shown = []; more = 0; }   // sin hueco: mejor no mostrar una lista a medias
       var exH = shown.length ? shown.length * lineH + (more > 0 ? lineH : 0) + gap : 0;
       var y = H - pad - (fixed + exH);
 
-      if (hasBoard) { var bh2 = y - 30 - topLimit; if (bh2 > 160) drawB(pad, topLimit, cw, bh2); }
+      var tyTop = topLimit + 6, tShown = [], tMore = 0, pw = 0, ph = 0;
+      if (exTop) {
+        var tLines = Math.max(1, Math.min(9, Math.floor((y - 30 - tyTop - 24) / lineH)));
+        tShown = exAll.slice(0, tLines); tMore = exAll.length - tShown.length;
+        if (tMore > 0 && tShown.length > 1) { tShown = tShown.slice(0, tShown.length - 1); tMore = exAll.length - tShown.length; }
+        pw = Math.round(cw * 0.74); ph = tShown.length * lineH + (tMore > 0 ? lineH : 0) + 34;
+      }
+      if (hasBoard) {
+        var bTop = topLimit;
+        if (exTop && y - 30 - (tyTop + ph + 20) >= 420) bTop = tyTop + ph + 20;       // la pizarra va debajo de la lista si cabe
+        var bh2 = y - 30 - bTop; if (bh2 > 160) drawB(pad, bTop, cw, bh2);
+      }
+      if (exTop) {
+        ctx.save(); rr(ctx, pad - 22, tyTop, pw + 22, ph, 26); ctx.fillStyle = 'rgba(0,0,0,.46)'; ctx.fill(); ctx.restore();
+        ctx.save(); ctx.globalAlpha = 0.93;
+        tShown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, tyTop + 50 + i * lineH, pw - 30); });
+        if (tMore > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + tMore + ' más', pad, tyTop + 50 + tShown.length * lineH); }
+        ctx.restore();
+      }
 
       chip(y); y += chipH + gap / 2;
       ctx.font = titleFont; ctx.fillStyle = '#fff';

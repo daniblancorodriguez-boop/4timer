@@ -9,7 +9,7 @@
   var runGuard = null, guardHash = '';   // mientras corre un entreno: pregunta antes de salir
   function armGuard(f) { runGuard = f; guardHash = f ? location.hash : ''; }
   var pending = null;      // entreno que se va a ejecutar {mode, cfg, name}
-  var defaultLogo = 'icons/gym-logo.webp';
+  var defaultLogo = 'icons/gym-logo.png';
 
   /* ---------- utilidades ---------- */
   function esc(s) {
@@ -22,6 +22,7 @@
   function dateEs(ts) { var m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], d = ts ? new Date(ts) : new Date(); return d.getDate() + ' ' + m[d.getMonth()] + ' ' + d.getFullYear(); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function logoSrc() { return Store.settings().logo || defaultLogo; }
+  function logoCls() { return Store.settings().logo ? '' : ' round'; }          // el logo de serie es circular
 
   var toastTimer;
   function toast(msg) {
@@ -129,7 +130,7 @@
     var html = '<div class="screen">' +
       '<div class="top"><div class="grow"><div class="wordmark"><span class="four">4</span>TIMER</div>' +
       (s.gymName ? '<div class="gymname">' + esc(s.gymName) + '</div>' : '') + '</div>' +
-      '<img class="gym-logo" src="' + esc(logoSrc()) + '" alt="' + esc(s.gymName || 'Logo del gimnasio') + '">' +
+      '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt="' + esc(s.gymName || 'Logo del gimnasio') + '">' +
       '<button class="icon-btn" data-nav="#/settings" aria-label="Ajustes">' + ICON.gear + '</button></div>' +
       '<p class="sr-only">Elige el tipo de entrenamiento</p><ul class="modes">';
     function modeCard(m) {
@@ -281,7 +282,7 @@
     { id: 'otros', name: 'Otros', desc: 'Tabata, intervalos y demás' }
   ];
   function catOf(it) {
-    if (/partner/i.test(it.name)) return 'partners';
+    if (/partner|pareja/i.test(it.name)) return 'partners';
     if (it.mode === 'emom') return 'emom';
     if (it.mode === 'amrap' || it.mode === 'amrapx') return 'amrap';
     if (it.mode === 'fortime') return 'fortime';
@@ -538,7 +539,7 @@
     return '<div class="screen run" data-type="prep">' +
       '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button>' +
       '<div class="grow"><div class="gymname" style="margin:0">' + esc(label) + '</div></div>' +
-      '<img class="gym-logo" src="' + esc(logoSrc()) + '" alt=""></div>' +
+      '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt=""></div>' +
       '<h1 class="sr-only">Temporizador</h1><div class="phase" id="phase" aria-live="polite"></div>' +
       '<div class="run-body"><div class="stage"><div class="bezel"><div class="display">' +
       '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
@@ -550,7 +551,7 @@
     app.innerHTML = '<div class="screen run counter-screen" data-type="work">' +
       '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button>' +
       '<div class="grow"><div class="gymname" style="margin:0">Contador de rondas</div></div>' +
-      '<img class="gym-logo" src="' + esc(logoSrc()) + '" alt=""></div>' +
+      '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt=""></div>' +
       '<h1 class="sr-only">Contador de rondas</h1><div class="phase" id="phase">Rondas</div>' +
       '<div class="stage"><div class="bezel"><div class="display"><div class="led" id="led-blue" role="img" aria-label="Rondas"></div></div></div></div>' +
       '<div class="counter-ctl"><button class="btn" id="minus" aria-label="Quitar una ronda">−</button>' +
@@ -821,6 +822,7 @@
       '<div class="seg-ctl" role="group" aria-label="Estilo del logo"><button class="btn small on" data-sty="std">Logo normal</button><button class="btn small" data-sty="logo">Logo grande</button></div>' +
       photoBtns('sh-bg', 'Foto de fondo', true) + (window.Share.videoSupported() ? videoBtns() : '') + photoBtns('sh-bd', 'Foto de la pizarra', true) +
       '<label class="chk"><input type="checkbox" id="sh-ex" checked> Mostrar ejercicios</label>' +
+      '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label>' +
       (manual ? '<button class="btn block" id="sh-hist" style="margin-bottom:10px">' + ICON.history + 'Guardar en el historial</button>' : '') +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
       '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
@@ -850,13 +852,13 @@
     function opts() {
       if (manual) res = buildManual();
       var rd = isRun ? window.RunUI.shareModel(res, st.hide) : res;
-      return { format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, map: isRun && !!st.map, r: rd };
+      return { format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
     }
     function draw() {
       var my = ++seq;
       return window.Share.render(canvas, opts()).then(function () { return my; });
     }
-    loadImg(logoSrc()).then(function (img) { st.logo = img; draw(); });
+    loadImg(logoSrc()).then(function (img) { if (img && !Store.settings().logo) img.__round = true; st.logo = img; draw(); });
     draw();
     function wirePhoto(id, key) {
       function pick(file) {
@@ -916,6 +918,7 @@
       cleanup = function () { clearVideo(); };
     }
     $('#sh-ex').addEventListener('change', function () { st.showEx = this.checked; draw(); });
+    $('#sh-top').addEventListener('change', function () { st.exTop = this.checked; draw(); });
     $$('[data-fmt]').forEach(function (b) {
       b.addEventListener('click', function () {
         st.format = b.dataset.fmt;
@@ -1093,7 +1096,7 @@
       '<div class="panel"><h2>Tu gimnasio</h2>' +
       '<div class="field"><div class="flabel">Nombre</div><input class="text-in" id="gym" maxlength="40" value="' + esc(s.gymName) + '" placeholder="Nombre del box" autocomplete="off"></div>' +
       '<div class="field"><div class="flabel">Logo (se muestra en la pantalla de inicio y en el reloj)</div>' +
-      '<div class="row" style="align-items:center;flex-wrap:wrap"><img class="gym-logo" style="height:56px" src="' + esc(logoSrc()) + '" alt="Logo actual">' +
+      '<div class="row" style="align-items:center;flex-wrap:wrap"><img class="gym-logo' + logoCls() + '" style="height:56px' + (logoCls() ? ';width:56px' : '') + '" src="' + esc(logoSrc()) + '" alt="Logo actual">' +
       '<label class="btn small" style="cursor:pointer">Cambiar logo<input type="file" accept="image/*" hidden id="logo"></label>' +
       '<button class="btn small" id="logo-reset">Restaurar</button></div></div></div></div>';
 
@@ -1137,7 +1140,7 @@
 
   /* ---------- arranque ---------- */
   window.AppKit = {
-    app: app, esc: esc, $: $, $$: $$, header: header, toast: toast, go: go, ICON: ICON, pad: pad, dateEs: dateEs, logoSrc: logoSrc, wakeLock: wakeLock, loadImg: loadImg,
+    app: app, esc: esc, $: $, $$: $$, header: header, toast: toast, go: go, ICON: ICON, pad: pad, dateEs: dateEs, logoSrc: logoSrc, logoCls: logoCls, wakeLock: wakeLock, loadImg: loadImg,
     setCleanup: function (f) { cleanup = f; },
     setRunGuard: armGuard,
     setShareResult: function (r) { lastResult = r; }

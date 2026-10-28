@@ -103,3 +103,8 @@ En el resultado de una carrera y en la tarjeta de compartir se puede cambiar de 
 ## Guardar en la galería y vídeo (compartir)
 - En el móvil, «Guardar imagen» y «Guardar vídeo» van a la galería, álbum **4TIMER** (plugin `@capacitor-community/media`; tras actualizar: `npm install` y `npx cap sync android`). En el navegador se descargan.
 - Vídeo: se elige o graba un vídeo de fondo y la app lo regraba con el logo, el resultado y los ejercicios encima (hasta 60 s, con su audio) usando `MediaRecorder`. El formato (MP4 o WebM) depende del móvil.
+
+## Logo y compartir
+- Logo de serie: círculo de 4TIME (`www/icons/gym-logo.png`, transparente fuera del círculo). Si subes uno propio en Ajustes, se usa el tuyo.
+- Compartir entreno: opción «Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo» (formatos Story y Post).
+- Entrenos de serie p11–p17 (parejas, EMOM par/impar, AMRAP 17', 5R For Time). Los ejemplos nuevos se añaden solos una vez a quien ya tenía la app.

@@ -77,14 +77,14 @@ const www = path.join(__dirname, '..', 'www');
   // ---- Predefinidos: info (i) con explicación ----
   await go('#/presets');
   const cats = $$('.card .c-title').map(e => e.textContent);
-  assert.strictEqual(JSON.stringify(cats), '["EMOM","AMRAP","For Time","Partners"]', 'categorías en orden: ' + cats);
+  assert.strictEqual(JSON.stringify(cats), '["EMOM","AMRAP","For Time","Partners","Otros"]', 'categorías en orden: ' + cats);
   assert.ok(!$('.preset'), 'primero la lista de categorías');
   click($$('.card')[0]); await tick(30);                      // entrar en EMOM
   assert.strictEqual(w.location.hash, '#/presets/emom');
-  assert.strictEqual($$('.preset').length, 5);
+  assert.strictEqual($$('.preset').length, 7);
   assert.ok($$('.p-name').every(n => !/partner/i.test(n.textContent)));
-  await go('#/presets/partners'); assert.strictEqual($$('.preset').length, 3);
-  await go('#/presets/amrap'); assert.strictEqual($$('.preset').length, 2);
+  await go('#/presets/partners'); assert.strictEqual($$('.preset').length, 5);
+  await go('#/presets/amrap'); assert.strictEqual($$('.preset').length, 3);
   await go('#/presets/emom');
   const info = $('[data-info="back-squat"]');
   assert.ok(info, 'cada ejercicio tiene su (i)');
@@ -131,7 +131,7 @@ const www = path.join(__dirname, '..', 'www');
   input($('#p-name'), 'Mi EMOM v2'); click($('#p-save')); await tick(30);
   assert.strictEqual(w.Store.getPreset(mine.id).name, 'Mi EMOM v2');
   click($(`[data-pdel="${mine.id}"]`)); await tick(10);
-  assert.strictEqual($$('.preset').length, 5);
+  assert.strictEqual($$('.preset').length, 7);
 
   // ---- EMOM con ejercicios: aparecen en pantalla y el rojo salta cada minuto ----
   w.Store.setSettings({ prep: 0 });

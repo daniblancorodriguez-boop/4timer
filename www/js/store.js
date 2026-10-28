@@ -38,7 +38,27 @@
       { id: 'p9', name: "EMOM 12' · Pull ups / Ski / Tríceps", mode: 'emom', cfg: { interval: 60, rounds: 12 }, numbered: true, lines: [
         L([ex('strict-pull-ups', '6')]), L([ex('sprint-ski', '30"')]), L([ex('triceps-band-ext', '20')]), L([ex('rest')])] },
       { id: 'p10', name: "EMOM 16' · Hip thrust / T2B / Push ups", mode: 'emom', cfg: { interval: 60, rounds: 16 }, numbered: true, lines: [
-        L([ex('hip-thrust', '12')]), L([ex('strict-t2b', '12')]), L([ex('slow-push-ups', '6')]), L([ex('kip-pull-ups', 'Máx')])] }
+        L([ex('hip-thrust', '12')]), L([ex('strict-t2b', '12')]), L([ex('slow-push-ups', '6')]), L([ex('kip-pull-ups', 'Máx')])] },
+      { id: 'p11', name: "A · 30\" ON × 30\" OFF · KB RDL + Row / Quadruped pull rack", mode: 'interval', cfg: { work: 30, rest: 30, rounds: 8 }, numbered: true, lines: [
+        L([ex('kb-rdl-row', 'Máx')]), L([ex('quadruped-pull-rack', 'Máx')]),
+        X('Ajusta las rondas a lo que mande el coach (por defecto 8)')] },
+      { id: 'p12', name: "B1 · EMOM 10' · Muscle ups / Burpees", mode: 'emom', cfg: { interval: 60, rounds: 10 }, numbered: false, lines: [
+        L([ex('burpees', '15')], 'minutos impares'), L([ex('muscle-ups', '3-5'), ex('kip-pull-ups', '15')], 'minutos pares · muscle ups o kip pull ups')] },
+      { id: 'p13', name: "B2 · EMOM 10' · Burpees / Squat jumps", mode: 'emom', cfg: { interval: 60, rounds: 10 }, numbered: false, lines: [
+        L([ex('squat-jumps', '20')], 'minutos impares'), L([ex('burpees', '15')], 'minutos pares')] },
+      { id: 'p14', name: "2 parejas · 6' ON × 1' OFF × 1R", mode: 'interval', cfg: { work: 360, rest: 60, rounds: 4 }, numbered: true, lines: [
+        X('Formato: 2 parejas'),
+        L([ex('ski', '1000 m'), ex('run', 'Máx m')]), L([ex('sled-push', '50 m'), ex('run', 'Máx m')]),
+        L([ex('burpees-broad-jump', '80 m'), ex('run', 'Máx m')]), L([ex('lunges', '100 m'), ex('run', 'Máx m')])] },
+      { id: 'p15', name: "Parejas · 7' ON × 30\" OFF × 1R", mode: 'interval', cfg: { work: 420, rest: 30, rounds: 5 }, numbered: true, lines: [
+        X('Formato: parejas'),
+        L([ex('run', '1000 m'), ex('ski', 'Máx cal')]), L([ex('sled-push', '50 m'), ex('ski', 'Máx cal')]),
+        L([ex('burpees-broad-jump', '80 m'), ex('ski', 'Máx cal')]), L([ex('wallballs-lunge', '100'), ex('ski', 'Máx cal')]),
+        L([ex('sled-pull', '50 m'), ex('ski', 'Máx cal')])] },
+      { id: 'p16', name: "A · AMRAP 17' · Front squat / Pull ups / Wallclimb", mode: 'amrap', cfg: { dur: 1020 }, numbered: false, lines: [
+        L([ex('pause-front-squat', '5')]), L([ex('ecc-pull-ups', '5')]), L([ex('wallclimb-box-obstacles', '5')])] },
+      { id: 'p17', name: "B · 5R For Time (TC 20') · Bike / Swing / Ski", mode: 'fortime', cfg: { cap: 1200 }, numbered: false, lines: [
+        X('5 rondas'), L([ex('cal-bike', '12')]), L([ex('american-swing', '25')]), L([ex('ski', '200 m')])] }
     ];
   }
 
@@ -76,7 +96,8 @@
       counter: 0,
       history: [],
       session: null,
-      programs: seedPrograms()
+      programs: seedPrograms(),
+      seedsSeen: seedsSeenNow()
     };
   }
 
@@ -90,6 +111,9 @@
     return { id: pr.id, name: pr.name, mode: pr.mode, cfg: pr.cfg, numbered: false, lines: lines };
   }
 
+  var OLD_P = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10'];
+  var NEW_E = ['kb-rdl-row', 'quadruped-pull-rack', 'muscle-ups', 'squat-jumps', 'burpees-broad-jump', 'pause-front-squat', 'ecc-pull-ups', 'wallclimb-box-obstacles'];
+  function seedsSeenNow() { return { p: seedPresets().map(function (x) { return x.id; }), e: (root.SEED_EXERCISES || []).map(function (x) { return x.id; }) }; }
   var data;
   function load() {
     var d = defaults();
@@ -102,12 +126,19 @@
         d.configs = p.configs || {};
         if (Array.isArray(p.exercises)) d.exercises = p.exercises;
         if (Array.isArray(p.presets)) { var seeds = seedPresets(); d.presets = p.presets.map(function (x) { return migratePreset(x, seeds); }); }
+        /* Ejemplos y ejercicios nuevos de una versión posterior: se añaden una sola vez (si los borras, no vuelven solos) */
+        var seen = p.seedsSeen || { p: OLD_P.slice(), e: (root.SEED_EXERCISES || []).map(function (e) { return e.id; }).filter(function (id) { return NEW_E.indexOf(id) < 0; }) };
+        var haveP = {}, haveE = {};
+        d.presets.forEach(function (x) { haveP[x.id] = 1; }); d.exercises.forEach(function (x) { haveE[x.id] = 1; });
+        seedPresets().forEach(function (x) { if (seen.p.indexOf(x.id) < 0 && !haveP[x.id]) d.presets.push(x); });
+        clone(root.SEED_EXERCISES || []).forEach(function (x) { if (seen.e.indexOf(x.id) < 0 && !haveE[x.id]) d.exercises.push(x); });
         d.counter = +p.counter || 0;
         if (Array.isArray(p.history)) d.history = p.history;
         if (Array.isArray(p.programs)) d.programs = p.programs;
         if (p.session && p.session.pending && typeof p.session.elapsed === 'number') d.session = p.session;
       }
     } catch (e) { /* datos corruptos: se usan los valores por defecto */ }
+    d.seedsSeen = seedsSeenNow();
     return d;
   }
   function persist() {

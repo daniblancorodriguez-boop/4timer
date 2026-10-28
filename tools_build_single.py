@@ -9,7 +9,7 @@ for f in ['timer','exercises','store','audio','led','map','share','run','runui',
     s=open(w+'js/%s.js'%f,encoding='utf8').read()
     assert '</script' not in s
     js+='/* ---- %s.js ---- */\n%s\n'%(f,s)
-js=js.replace("var defaultLogo = 'icons/gym-logo.webp';","var defaultLogo = 'data:image/webp;base64,%s';"%b64('icons/gym-logo.webp'))
+js=js.replace("var defaultLogo = 'icons/gym-logo.png';","var defaultLogo = 'data:image/png;base64,%s';"%b64('icons/gym-logo.png'))
 html=open(w+'index.html',encoding='utf8').read()
 html=html.replace('<link rel="manifest" href="manifest.webmanifest">\n','')
 html=html.replace('<link rel="icon" href="icons/icon-192.png">','<link rel="icon" href="data:image/png;base64,%s">'%b64('icons/icon-192.png'))

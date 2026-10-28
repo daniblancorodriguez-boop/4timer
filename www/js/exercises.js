@@ -41,6 +41,14 @@
     { id: 'strict-t2b', name: 'Strict T2B', desc: 'Toes to bar estricto: colgado de la barra, subes los pies hasta tocarla sin balanceo ni impulso. Trabaja abdomen y agarre.' },
     { id: 'slow-push-ups', name: 'Slow push ups', desc: 'Flexiones lentas: bajas y subes de forma controlada y despacio para aumentar el tiempo bajo tensión.' },
     { id: 'kip-pull-ups', name: 'Kip pull ups', desc: 'Dominadas con kipping: te ayudas de un balanceo del cuerpo para subir la barbilla sobre la barra. Permite hacer más repeticiones que las estrictas.' },
+    { id: 'kb-rdl-row', name: 'KB RDL + Row', desc: 'Peso muerto rumano con kettlebell (bajas la pesa por delante de las piernas con la espalda recta y las caderas atrás) seguido de un remo, tirando de la kettlebell hacia la cadera. Se hacen las máximas repeticiones posibles en el tiempo de trabajo.' },
+    { id: 'quadruped-pull-rack', name: 'Quadruped pull rack', desc: 'Desde posición a cuatro apoyos (cuadrupedia), con las manos en el suelo y las rodillas ligeramente levantadas, te arrastras tirando de la estructura (rack) o de una barra baja. Trabaja espalda, hombros y core.' },
+    { id: 'muscle-ups', name: 'Muscle ups', desc: 'Dominada explosiva en barra o anillas que termina con la transición por encima de ella hasta quedar con los brazos extendidos y el pecho sobre la barra (o las anillas).' },
+    { id: 'squat-jumps', name: 'Squat jumps', desc: 'Sentadilla con salto: bajas a sentadilla y subes saltando lo más alto posible, aterrizando con las rodillas flexionadas.' },
+    { id: 'burpees-broad-jump', name: 'Burpees broad jump', desc: 'Burpee seguido de un salto de longitud hacia delante. En cada repetición avanzas, y la distancia total se indica en metros.' },
+    { id: 'pause-front-squat', name: 'Pause front squat', desc: 'Sentadilla frontal (barra apoyada delante, sobre los hombros) con una pausa de uno o dos segundos en el punto más bajo antes de subir.' },
+    { id: 'ecc-pull-ups', name: 'ECC pull ups', desc: 'Dominadas excéntricas: te ayudas para subir (salto o cajón) y bajas muy despacio, controlando el descenso. Trabaja espalda, brazos y agarre.' },
+    { id: 'wallclimb-box-obstacles', name: 'Wallclimb box or obstacles', desc: 'Pasar por encima de un obstáculo (un cajón alto o una pared) subiendo y bajando al otro lado. Se escoge el obstáculo que haya disponible.' },
     { id: 'rest', name: 'Rest', desc: 'Descanso: tiempo sin hacer ejercicio dentro del minuto o del intervalo.' }
   ];
 })(window);

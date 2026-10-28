@@ -370,7 +370,7 @@
     var phase = 'ready', t0 = 0, gpsAcc = null, gpsErr = '', lastFix = 0, started = false, sched = {}, notifIds = [], stopGps = null, iv = null, prepScheduled = false, lastIdx = -1;
     var label = cfg.progName ? cfg.progName : 'Running';
     app().innerHTML = '<div class="screen run run-gps" data-type="prep">' +
-      '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button><div class="grow"><div class="gymname" style="margin:0">' + esc(label) + '</div></div><img class="gym-logo" src="' + esc(K().logoSrc()) + '" alt=""></div>' +
+      '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button><div class="grow"><div class="gymname" style="margin:0">' + esc(label) + '</div></div><img class="gym-logo' + K().logoCls() + '" src="' + esc(K().logoSrc()) + '" alt=""></div>' +
       '<h1 class="sr-only">Carrera</h1><div class="phase" id="phase" aria-live="polite">' + esc(cfg.name) + '</div><div class="gps-st" id="gps-st" role="status">Buscando GPS…</div>' +
       '<div class="run-body rg-body"><div class="rg-leds">' +
       blk('TIEMPO', 'led-red', 'rg-t') + blk('KM', 'led-blue', 'rg-d') + blk('RITMO /km', 'led-pace', 'rg-p') + '</div>' +

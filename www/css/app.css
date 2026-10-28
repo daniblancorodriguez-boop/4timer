@@ -42,6 +42,7 @@ button { cursor: pointer; border: 0; background: none; }
 .wordmark { font-weight: 800; font-style: italic; font-size: 38px; line-height: 1; letter-spacing: -0.5px; }
 .wordmark .four { color: transparent; -webkit-text-stroke: 2px var(--orange); margin-right: 1px; }
 .gymname { color: var(--muted); font-size: 16px; margin-top: 2px; }
+.gym-logo.round { border-radius: 50%; height: 46px; width: 46px; }
 .gym-logo { height: 40px; width: auto; max-width: 110px; object-fit: contain; border-radius: 6px; display: block; }
 .title { font-weight: 800; font-style: italic; font-size: 32px; line-height: 1.05; margin: 0; }
 .icon-btn { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); flex: none; }
@@ -126,6 +127,7 @@ input[type=range] { width: 100%; accent-color: var(--orange); height: 36px; }
 .run { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; max-width: none; padding-top: calc(var(--safe-t) + 10px); padding-bottom: calc(var(--safe-b) + 14px); }
 .run .top { margin-bottom: 4px; }
 .run .gym-logo { height: 44px; max-width: 140px; }
+.run .gym-logo.round { width: 44px; }
 .phase { text-align: center; font-weight: 800; font-style: italic; font-size: 40px; line-height: 1; min-height: 44px; color: var(--chalk); }
 .run[data-type=rest] .phase { color: var(--rest); }
 .run[data-type=prep] .phase { color: var(--orange); }
