@@ -1,5 +1,5 @@
 /* Service worker de 4TIMER: funciona sin conexión */
-const CACHE = '4timer-v6';
+const CACHE = '4timer-v7';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/timer.js', 'js/exercises.js', 'js/store.js', 'js/audio.js', 'js/led.js', 'js/map.js', 'js/share.js', 'js/run.js', 'js/runui.js', 'js/app.js',
