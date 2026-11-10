@@ -825,6 +825,8 @@
       '<div id="sh-std">' + photoBtns('sh-bg', 'Foto de fondo', true) + (window.Share.videoSupported() ? videoBtns() : '') + photoBtns('sh-bd', 'Foto de la pizarra', true) +
       '<label class="chk"><input type="checkbox" id="sh-ex" checked> Mostrar ejercicios</label>' +
       '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label></div>' +
+      '<label class="chk"><input type="checkbox" id="sh-t" checked> Mostrar el cartel del modo y el nombre</label>' +
+      '<label class="chk"><input type="checkbox" id="sh-s" checked> Mostrar el marcador (tiempo / resultado)</label>' +
       (manual ? '<button class="btn block" id="sh-hist" style="margin-bottom:10px">' + ICON.history + 'Guardar en el historial</button>' : '') +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
       '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
@@ -856,7 +858,7 @@
       if (manual) res = buildManual();
       var rd = isRun ? window.RunUI.shareModel(res, st.hide) : res;
       var lay = (!isRun && st.format === 'story') ? st.layout : 'std';
-      return { layout: lay, imgs: st.slots[lay] || [], placeholders: !final, format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
+      return { hideTitle: st.showT === false, hideStat: st.showS === false, layout: lay, imgs: st.slots[lay] || [], placeholders: !final, format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
     }
     function draw(final) {
       var my = ++seq;
@@ -948,6 +950,8 @@
       cleanup = function () { clearVideo(); };
     }
     $('#sh-ex').addEventListener('change', function () { st.showEx = this.checked; draw(); });
+    $('#sh-t').addEventListener('change', function () { st.showT = this.checked; draw(); });
+    $('#sh-s').addEventListener('change', function () { st.showS = this.checked; draw(); });
     $('#sh-top').addEventListener('change', function () { st.exTop = this.checked; draw(); });
     $$('[data-fmt]').forEach(function (b) {
       b.addEventListener('click', function () {

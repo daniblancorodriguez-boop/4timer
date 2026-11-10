@@ -259,6 +259,7 @@
       function drawB(x, y, w, h) { if (routeBoard) { if (probe) { probe.w = Math.round(w); probe.h = Math.round(h); } drawRoute(ctx, r.route, x, y, w, h, mapPre); } else drawBoard(ctx, o.board, x, y, w, h); }
       var exAll = (o.showExercises && r.lines) ? r.lines : [];
       var chipH = 60, gap = 26, lineH = 62, footY = H - pad;
+      var showT = !o.hideTitle, showS = !o.hideStat;        // se pueden quitar el cartel del modo/nombre y el marcador
 
       function footer() {
         ctx.font = '600 38px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.date, pad, footY);
@@ -276,10 +277,10 @@
       if (land) {
         var colW = 880, rx = pad + colW + 70, rw = W - pad - rx;
         var y0 = topLimit - 10;
-        chip(y0);
-        var ty = y0 + chipH + gap / 2, tf = '800 italic 88px ' + F;
+        if (showT) chip(y0);
+        var ty = y0 + (showT ? chipH + gap / 2 : 0), tf = '800 italic 88px ' + F;
         ctx.font = tf; ctx.fillStyle = '#fff';
-        var tl = wrap(ctx, r.name, colW, 2);
+        var tl = showT ? wrap(ctx, r.name, colW, 2) : [];
         tl.forEach(function (t, i) { ctx.fillText(t, pad, ty + 78 + i * 90); });
         var ly = ty + tl.length * 90 + 24, lroom = footY - 70 - ly;
         if (hasBoard && lroom > 160) drawB(pad, ly, colW, lroom);
@@ -292,9 +293,11 @@
         // marcador a la derecha, centrado en vertical
         var probe = r.kind === 'rounds' ? '00' : r.kind === 'run' ? '00.00' : '00:00', uu = Math.min(3.6, (rw - 76) / root.LED.measure(probe, 1)), dH = 96 * uu, stH = 56 + dH + 44;
         var areaTop = topLimit - 10, areaH = footY - 70 - areaTop, sy = areaTop + Math.max(0, (areaH - stH - 70) / 2);
-        drawStat(ctx, r, rx, sy, rw, uu, dH);
-        ctx.font = '700 46px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-        ctx.fillText(r.sub || '', rx + rw / 2, sy + stH + 56); ctx.textAlign = 'left';
+        if (showS) {
+          drawStat(ctx, r, rx, sy, rw, uu, dH);
+          ctx.font = '700 46px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
+          ctx.fillText(r.sub || '', rx + rw / 2, sy + stH + 56); ctx.textAlign = 'left';
+        }
         footer();
         return canvas;
       }
@@ -307,7 +310,7 @@
       var titleFont = '800 italic 98px ' + F;
       ctx.font = titleFont;
       var titleLines = wrap(ctx, r.name, cw, 2), titleH = titleLines.length * 100 + 14;
-      var fixed = footerH + subH + statH + gap + titleH + chipH + gap + gap;
+      var fixed = footerH + (showS ? subH + statH : 0) + (showT ? titleH + chipH + gap : 0) + gap + gap;
       var room = H - pad - topLimit - fixed - gap;
       var boardMin = hasBoard ? (H > 1500 ? 560 : 400) : 0;
       var maxEx = Math.max(0, Math.min(9, Math.floor((room - boardMin) / lineH)));
@@ -339,15 +342,19 @@
       }
 
       if (lay) artLayout(ctx, o, lay, pad, topLimit, cw, y - 28);
-      chip(y); y += chipH + gap / 2;
-      ctx.font = titleFont; ctx.fillStyle = '#fff';
-      titleLines.forEach(function (t, i) { ctx.fillText(t, pad, y + 88 + i * 100); });
-      y += titleH + gap / 2;
-      drawStat(ctx, r, pad, y, cw, u, digitsH);
-      y += statH + 14;
-      ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-      ctx.fillText(r.sub || '', W / 2, y + 40); ctx.textAlign = 'left';
-      y += subH - 14 + gap / 2;
+      if (showT) {
+        chip(y); y += chipH + gap / 2;
+        ctx.font = titleFont; ctx.fillStyle = '#fff';
+        titleLines.forEach(function (t, i) { ctx.fillText(t, pad, y + 88 + i * 100); });
+        y += titleH + gap / 2;
+      }
+      if (showS) {
+        drawStat(ctx, r, pad, y, cw, u, digitsH);
+        y += statH + 14;
+        ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
+        ctx.fillText(r.sub || '', W / 2, y + 40); ctx.textAlign = 'left';
+        y += subH - 14 + gap / 2;
+      }
       shown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, y + 44 + i * lineH, cw); });
       if (more > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + more + ' más', pad, y + 44 + shown.length * lineH); }
       footer();

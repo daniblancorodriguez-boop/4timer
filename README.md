@@ -115,3 +115,6 @@ En «Compartir entreno» hay un selector de estilo: **Normal**, **Carrete 3 + fo
 ## Vídeo e Instagram
 - Instagram limita a 15 s lo que recibe desde otra app con «Compartir». Para historias de hasta 60 s: «Guardar vídeo» y subirlo desde la galería dentro de Instagram.
 - Un vídeo de más de 60 s se graba en partes de 60 s (`4timer-entreno-parte1`, `-parte2`…), una por historia.
+
+### Quitar carteles en la tarjeta de compartir
+En la pantalla de compartir hay dos casillas: **Mostrar el cartel del modo y el nombre** y **Mostrar el marcador (tiempo / resultado)**. Desmárcalas para dejar la foto o el vídeo limpios; los ejercicios y el pie se recolocan solos. Funciona con todos los estilos, formatos y con el vídeo.
