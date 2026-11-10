@@ -111,3 +111,7 @@ En el resultado de una carrera y en la tarjeta de compartir se puede cambiar de 
 
 ## Estilos de tarjeta con varias fotos (Story)
 En «Compartir entreno» hay un selector de estilo: **Normal**, **Carrete 3 + fondo** (tira de fotomatón), **Carrete 4 + 2 fondos** (película inclinada sobre dos fondos) y **Collage 3 + fondo**. Cada hueco tiene su «Hacer foto / Subir foto». Los huecos vacíos solo se ven en la vista previa; al guardar o compartir no salen. Solo en formato Story y sin lista de ejercicios.
+
+## Vídeo e Instagram
+- Instagram limita a 15 s lo que recibe desde otra app con «Compartir». Para historias de hasta 60 s: «Guardar vídeo» y subirlo desde la galería dentro de Instagram.
+- Un vídeo de más de 60 s se graba en partes de 60 s (`4timer-entreno-parte1`, `-parte2`…), una por historia.

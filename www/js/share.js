@@ -432,7 +432,7 @@
     o2.overlay = true; o2.photo = null;
     return render(c, o2).then(function () { return c; });
   }
-  /* Graba el vídeo con la tarjeta encima. opts: { onProgress(0..1), maxSec } → Promise<{blob, mime, ext}> */
+  /* Graba el vídeo con la tarjeta encima. opts: { onProgress(0..1), maxSec, start } → Promise<{blob, mime, ext}> (graba desde `start` hasta `start+maxSec`) */
   function recordVideo(o, video, opts) {
     opts = opts || {};
     var mime = videoMime();
@@ -441,7 +441,7 @@
       return new Promise(function (resolve, reject) {
         var scale = Math.min(1, 1280 / Math.max(ov.width, ov.height)), W = Math.round(ov.width * scale), H = Math.round(ov.height * scale);
         var cv = root.document.createElement('canvas'); cv.width = W; cv.height = H;
-        var ctx = cv.getContext('2d'), dur = Math.min(video.duration || 60, opts.maxSec || 60);
+        var ctx = cv.getContext('2d'), t0 = opts.start || 0, end = Math.min(video.duration || 60, t0 + (opts.maxSec || 60)), dur = Math.max(0.1, end - t0);
         var stream = cv.captureStream(30), rec, chunks = [], done = false, raf = 0;
         try {                                                   // audio del vídeo sin que suene por el altavoz (una sola vez por elemento)
           var AC = root.AudioContext || root.webkitAudioContext;
@@ -468,8 +468,8 @@
           ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
           if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
           ctx.drawImage(ov, 0, 0, W, H);
-          if (opts.onProgress) opts.onProgress(Math.min(1, video.currentTime / dur));
-          if (video.ended || video.currentTime >= dur - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
+          if (opts.onProgress) opts.onProgress(Math.max(0, Math.min(1, (video.currentTime - t0) / dur)));
+          if (video.ended || video.currentTime >= end - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
           raf = root.requestAnimationFrame(frame);
         }
         function go() {
@@ -479,38 +479,56 @@
           if (pl && pl.then) pl.then(begin, function () { video.muted = true; video.play().then(begin, function (e) { finish(e); try { rec.stop(); } catch (x) {} }); });
           else begin();
         }
-        video.muted = false; video.currentTime = 0;
+        video.muted = false; video.currentTime = t0;
         var started = false; function once() { if (started) return; started = true; video.removeEventListener('seeked', once); go(); }
         video.addEventListener('seeked', once); setTimeout(once, 600);
       });
     });
   }
+  /* Instagram admite hasta 60 s por historia: un vídeo más largo se graba en partes de 60 s, una detrás de otra. → Promise<[{blob,mime,ext}]> */
+  var PART_SEC = 60;
+  function partsOf(video) { return Math.max(1, Math.ceil(((video.duration || PART_SEC) - 0.05) / PART_SEC)); }
+  function recordVideoParts(o, video, opts) {
+    opts = opts || {};
+    var n = partsOf(video), out = [], i = 0;
+    function next() {
+      if (i >= n) return Promise.resolve(out);
+      var idx = i++;
+      return recordVideo(o, video, { start: idx * PART_SEC, maxSec: PART_SEC, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
+        .then(function (v) { out.push(v); return next(); });
+    }
+    return next();
+  }
   function blobB64(blob) {
     return new Promise(function (res, rej) { var f = new root.FileReader(); f.onload = function () { res(String(f.result).split(',')[1]); }; f.onerror = rej; f.readAsDataURL(blob); });
   }
-  /* Guarda el vídeo en la galería (móvil) o lo descarga (navegador): 'gallery' | 'saved' | 'error' */
-  function saveVideo(v) {
-    var name = '4timer-entreno.' + v.ext, cap = root.Capacitor, P = cap && cap.Plugins;
+  function vname(v, i, n) { return '4timer-entreno' + (n > 1 ? '-parte' + (i + 1) : '') + '.' + v.ext; }
+  /* Guarda el vídeo (o sus partes) en la galería (móvil) o lo descarga (navegador): 'gallery' | 'saved' | 'error' */
+  function saveVideo(vs) {
+    vs = [].concat(vs); var cap = root.Capacitor, P = cap && cap.Plugins;
     if (native() && P.Filesystem) {
-      return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: name, data: b64, directory: 'CACHE' }); })
-        .then(function (f) { return saveGallery(f.uri, true); }).then(function () { return 'gallery'; }).catch(function () { return 'error'; });
+      return vs.reduce(function (pr, v, i) {
+        return pr.then(function () { return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: vname(v, i, vs.length), data: b64, directory: 'CACHE' }); }).then(function (f) { return saveGallery(f.uri, true); }); });
+      }, Promise.resolve()).then(function () { return 'gallery'; }).catch(function () { return 'error'; });
     }
-    download(v.blob, name); return Promise.resolve('saved');
+    vs.forEach(function (v, i) { setTimeout(function () { download(v.blob, vname(v, i, vs.length)); }, i * 700); });
+    return Promise.resolve('saved');
   }
-  function shareVideo(v, text) {
-    var name = '4timer-entreno.' + v.ext, cap = root.Capacitor, P = cap && cap.Plugins;
+  function shareVideo(vs, text) {
+    vs = [].concat(vs); var cap = root.Capacitor, P = cap && cap.Plugins;
     if (cap && cap.isNativePlatform && cap.isNativePlatform() && P && P.Filesystem && P.Share) {
-      return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: name, data: b64, directory: 'CACHE' }); })
-        .then(function (f) { return P.Share.share({ title: '4TIMER', text: text, files: [f.uri], dialogTitle: 'Compartir vídeo' }); })
+      return vs.reduce(function (pr, v, i) {
+        return pr.then(function (uris) { return blobB64(v.blob).then(function (b64) { return P.Filesystem.writeFile({ path: vname(v, i, vs.length), data: b64, directory: 'CACHE' }); }).then(function (f) { return uris.concat(f.uri); }); });
+      }, Promise.resolve([])).then(function (uris) { return P.Share.share({ title: '4TIMER', text: text, files: uris, dialogTitle: 'Compartir vídeo' }); })
         .then(function () { return 'shared'; }).catch(function (e) { return /cancel/i.test(String(e && e.message)) ? 'cancelled' : 'error'; });
     }
-    var file = null; try { file = new File([v.blob], name, { type: v.mime }); } catch (e) {}
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      return navigator.share({ files: [file], text: text }).then(function () { return 'shared'; })
-        .catch(function (e) { if (e && e.name === 'AbortError') return 'cancelled'; download(v.blob, name); return 'saved'; });
+    var files = []; try { files = vs.map(function (v, i) { return new File([v.blob], vname(v, i, vs.length), { type: v.mime }); }); } catch (e) {}
+    if (files.length && navigator.canShare && navigator.canShare({ files: files })) {
+      return navigator.share({ files: files, text: text }).then(function () { return 'shared'; })
+        .catch(function (e) { if (e && e.name === 'AbortError') return 'cancelled'; return saveVideo(vs); });
     }
-    download(v.blob, name); return Promise.resolve('saved');
+    return saveVideo(vs);
   }
 
-  root.Share = { LAYOUT_SLOTS: LAYOUT_SLOTS, FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
+  root.Share = { LAYOUT_SLOTS: LAYOUT_SLOTS, FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, recordVideoParts: recordVideoParts, partsOf: partsOf, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
 })(typeof window !== 'undefined' ? window : globalThis);

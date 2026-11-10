@@ -828,8 +828,9 @@
       (manual ? '<button class="btn block" id="sh-hist" style="margin-bottom:10px">' + ICON.history + 'Guardar en el historial</button>' : '') +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
       '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
-      '<div id="sh-vid-box" hidden><button class="btn primary block" id="sh-vshare" style="margin-top:10px">' + ICON.share + 'Compartir vídeo</button>' +
-      '<button class="btn block" id="sh-vsave" style="margin-top:10px">' + ICON.download + 'Guardar vídeo</button>' +
+      '<div id="sh-vid-box" hidden><button class="btn block" id="sh-vshare" style="margin-top:10px">' + ICON.share + 'Compartir vídeo</button>' +
+      '<button class="btn primary block" id="sh-vsave" style="margin-top:10px">' + ICON.download + 'Guardar vídeo</button>' +
+      '<p class="hint">Instagram recorta a 15 s lo que se le envía desde otra app con «Compartir». Para historias de hasta 60 s pulsa «Guardar vídeo» y súbelo desde la galería dentro de Instagram. Si el vídeo dura más de 60 s se guarda en partes de 60 s.</p>' +
       '<div class="vprog" id="sh-vprog" hidden><div class="vbar"><i id="sh-vbar"></i></div><span id="sh-vtxt">Grabando…</span></div></div>' +
       '<p class="hint">En «Compartir» elige Instagram (Stories o publicación) en el menú del móvil. Si tu navegador no lo permite, se guarda la imagen para que la subas tú.</p></div>';
     var canvas = $('#sh-canvas'), seq = 0, res = manual ? null : lastResult;
@@ -916,7 +917,7 @@
         v.onloadeddata = function () {
           if (!(v.duration > 0)) { clearVideo(); toast('No se pudo abrir ese vídeo'); return; }
           v.onseeked = function () { v.onseeked = null; st.video = v; st.photo = v; st.photoIsVideo = true; $('#sh-bg-rm').hidden = false; $('#sh-vd-rm').hidden = false; $('#sh-vid-box').hidden = false; draw();
-            if (v.duration > 60) toast('El vídeo dura ' + Math.round(v.duration) + ' s: se usarán los primeros 60'); };
+            var np = window.Share.partsOf(v); if (np > 1) toast('El vídeo dura ' + Math.round(v.duration) + ' s: se grabará en ' + np + ' partes de 60 s (límite de Instagram)'); };
           try { v.currentTime = Math.min(0.2, v.duration / 2); } catch (e) {}
         };
         v.src = vurl;
@@ -930,7 +931,7 @@
         busy = true; var box = $('#sh-vprog'); box.hidden = false; $('#sh-vbar').style.width = '0%'; $('#sh-vtxt').textContent = 'Grabando… no cierres la pantalla';
         $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = true; });
         var o = opts(); o.photo = null;
-        window.Share.recordVideo(o, st.video, { maxSec: 60, onProgress: function (p) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; } })
+        window.Share.recordVideoParts(o, st.video, { onProgress: function (p, i, n) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; $('#sh-vtxt').textContent = n > 1 ? 'Grabando parte ' + i + ' de ' + n + '… no cierres la pantalla' : 'Grabando… no cierres la pantalla'; } })
           .then(function (v) {
             $('#sh-vtxt').textContent = what === 'share' ? 'Abriendo compartir…' : 'Guardando…';
             return (what === 'share' ? window.Share.shareVideo(v, text() + ' #4TIMER') : window.Share.saveVideo(v)).then(function (r) {
