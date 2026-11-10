@@ -182,8 +182,9 @@
       ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
     }
   }
-  function drawBoard(ctx, img, x, y, w, h) {
+  function drawBoard(ctx, img, x, y, w, h, o) {
     var bs = imgSize(img), bk = Math.min(w / bs.w, h / bs.h), bw = bs.w * bk, bh = bs.h * bk, bx = x + (w - bw) / 2, by = y + (h - bh) / 2;
+    if (o) o.__boardRect = { x: bx, y: by, w: bw, h: bh };
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 30; ctx.fillStyle = '#000'; rr(ctx, bx, by, bw, bh, 26); ctx.fill(); ctx.restore();
     ctx.save(); rr(ctx, bx, by, bw, bh, 26); ctx.clip(); ctx.drawImage(img, bx, by, bw, bh); ctx.restore();
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, bx, by, bw, bh, 26); ctx.stroke();
@@ -256,7 +257,7 @@
       var topLimit = pad + logoH + 40;
 
       var routeBoard = r.kind === 'run' && r.route && r.route.length > 1 && !o.board, hasBoard = !!(o.board || routeBoard);
-      function drawB(x, y, w, h) { if (routeBoard) { if (probe) { probe.w = Math.round(w); probe.h = Math.round(h); } drawRoute(ctx, r.route, x, y, w, h, mapPre); } else drawBoard(ctx, o.board, x, y, w, h); }
+      function drawB(x, y, w, h) { if (routeBoard) { if (probe) { probe.w = Math.round(w); probe.h = Math.round(h); } drawRoute(ctx, r.route, x, y, w, h, mapPre); } else drawBoard(ctx, o.board, x, y, w, h, o); }
       var exAll = (o.showExercises && r.lines) ? r.lines : [];
       var chipH = 60, gap = 26, lineH = 62, footY = H - pad;
       var showT = !o.hideTitle, showS = !o.hideStat;        // se pueden quitar el cartel del modo/nombre y el marcador
@@ -444,7 +445,8 @@
     opts = opts || {};
     var mime = videoMime();
     if (!mime) return Promise.reject(new Error('sin-soporte'));
-    return renderOverlay(o).then(function (ov) {
+    var front = opts.role === 'board';
+    return (front ? (function () { var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k]; return render(c, o2).then(function () { c.__rect = o2.__boardRect; return c; }); })() : renderOverlay(o)).then(function (ov) {
       return new Promise(function (resolve, reject) {
         var scale = Math.min(1, 1280 / Math.max(ov.width, ov.height)), W = Math.round(ov.width * scale), H = Math.round(ov.height * scale);
         var cv = root.document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -473,8 +475,18 @@
         };
         function frame() {
           ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-          if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
-          ctx.drawImage(ov, 0, 0, W, H);
+          if (front) {
+            ctx.drawImage(ov, 0, 0, W, H);
+            var R = ov.__rect;
+            if (R && video.videoWidth) {
+              var sx = W / ov.width, sy = H / ov.height;
+              ctx.save(); rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.clip(); ctx.drawImage(video, R.x * sx, R.y * sy, R.w * sx, R.h * sy); ctx.restore();
+              ctx.lineWidth = 3 * sx; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.stroke();
+            }
+          } else {
+            if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
+            ctx.drawImage(ov, 0, 0, W, H);
+          }
           if (opts.onProgress) opts.onProgress(Math.max(0, Math.min(1, (video.currentTime - t0) / dur)));
           if (video.ended || video.currentTime >= end - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
           raf = root.requestAnimationFrame(frame);
@@ -501,7 +513,7 @@
     function next() {
       if (i >= n) return Promise.resolve(out);
       var idx = i++;
-      return recordVideo(o, video, { start: idx * PART_SEC, maxSec: PART_SEC, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
+      return recordVideo(o, video, { start: idx * PART_SEC, maxSec: PART_SEC, role: opts.role, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
         .then(function (v) { out.push(v); return next(); });
     }
     return next();

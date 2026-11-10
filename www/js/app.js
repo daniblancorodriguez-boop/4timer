@@ -787,11 +787,11 @@
   function loadImg(src) {
     return new Promise(function (res) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { res(null); }; i.src = src; });
   }
-  function videoBtns() {
-    return '<div class="photo-row"><span class="photo-l">Vídeo de fondo</span>' +
-      '<label class="btn small">' + ICON.camera + 'Grabar vídeo<input type="file" id="sh-vd-cam" accept="video/*" capture="environment" hidden></label>' +
-      '<label class="btn small">' + ICON.image + 'Subir vídeo<input type="file" id="sh-vd-gal" accept="video/*" hidden></label>' +
-      '<button class="btn small" id="sh-vd-rm" hidden>Quitar</button></div>';
+  function videoBtns(id, label) {
+    return '<div class="photo-row"><span class="photo-l">' + label + '</span>' +
+      '<label class="btn small">' + ICON.camera + 'Grabar vídeo<input type="file" id="' + id + '-cam" accept="video/*" capture="environment" hidden></label>' +
+      '<label class="btn small">' + ICON.image + 'Subir vídeo<input type="file" id="' + id + '-gal" accept="video/*" hidden></label>' +
+      '<button class="btn small" id="' + id + '-rm" hidden>Quitar</button></div>';
   }
   function photoBtns(id, label, withCam) {
     return '<div class="photo-row"><span class="photo-l">' + label + '</span>' +
@@ -813,6 +813,7 @@
   }
   function viewShare(manual) {
     if (!manual && !lastResult) return go('#/');
+    var VS = window.Share.videoSupported();
     var st = { layout: 'std', slots: { strip3: [], strip4: [], collage: [] }, format: 'story', style: 'std', photo: null, board: null, showEx: true, logo: null, type: 'fortime' };
     var s = Store.settings();
     app.innerHTML = '<div class="screen share-view">' + header(manual ? 'Compartir entreno' : 'Compartir', { back: '#/' }) +
@@ -822,7 +823,7 @@
       '<div class="seg-ctl" role="group" aria-label="Estilo del logo"><button class="btn small on" data-sty="std">Logo normal</button><button class="btn small" data-sty="logo">Logo grande</button></div>' +
       '<div class="seg-ctl" id="sh-lay" role="group" aria-label="Estilo de la tarjeta"><button class="btn small on" data-lay="std">Normal</button><button class="btn small" data-lay="strip3">Carrete 3 + fondo</button><button class="btn small" data-lay="strip4">Carrete 4 + 2 fondos</button><button class="btn small" data-lay="collage">Collage 3 + fondo</button></div>' +
       '<div id="sh-slots" hidden></div><p class="hint" id="sh-lay-hint" hidden>Estos estilos son para Story 9:16 y llevan solo el resultado (sin lista de ejercicios).</p>' +
-      '<div id="sh-std">' + photoBtns('sh-bg', 'Foto de fondo', true) + (window.Share.videoSupported() ? videoBtns() : '') + photoBtns('sh-bd', 'Foto de la pizarra', true) +
+      '<div id="sh-std">' + photoBtns('sh-bg', 'Foto de fondo', true) + (VS ? videoBtns('sh-vb', 'Vídeo de fondo') : '') + photoBtns('sh-bd', 'Foto frontal', true) + (VS ? videoBtns('sh-vf', 'Vídeo frontal') : '') +
       '<label class="chk"><input type="checkbox" id="sh-ex" checked> Mostrar ejercicios</label>' +
       '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label></div>' +
       '<label class="chk"><input type="checkbox" id="sh-t" checked> Mostrar el cartel del modo y el nombre</label>' +
@@ -906,34 +907,38 @@
       $('#' + id + '-rm').addEventListener('click', function () { st[key] = null; this.hidden = true; draw(); });
     }
     wirePhoto('sh-bg', 'photo'); wirePhoto('sh-bd', 'board');
-    /* Vídeo de fondo: la vista previa usa su primer fotograma; al guardar/compartir se graba con la tarjeta encima */
+    /* Vídeo de fondo o frontal (solo uno a la vez): la vista previa usa su primer fotograma; al guardar/compartir se graba con la tarjeta */
     var vurl = null, busy = false;
-    function clearVideo() { if (vurl) { URL.revokeObjectURL(vurl); vurl = null; } if (st.video) { st.video.pause(); st.video.removeAttribute('src'); st.video = null; if (st.photo && st.photoIsVideo) st.photo = null; } st.photoIsVideo = false; }
-    if ($('#sh-vd-rm')) {
-      var pickVideo = function (file) {
+    function hideVid() { ['sh-vb-rm', 'sh-vf-rm'].forEach(function (i) { var e = $('#' + i); if (e) e.hidden = true; }); var b = $('#sh-vid-box'); if (b) b.hidden = true; }
+    function clearVideo() { if (vurl) { URL.revokeObjectURL(vurl); vurl = null; } if (st.video) { st.video.pause(); st.video.removeAttribute('src'); if (st[st.vkey] === st.video) st[st.vkey] = null; st.video = null; } st.vkey = null; }
+    if (VS) {
+      var pickVideo = function (file, key, id) {
         if (!file) return;
-        clearVideo();
+        clearVideo(); hideVid();
         var v = document.createElement('video'); v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.muted = true;
         vurl = URL.createObjectURL(file);
         v.onerror = function () { clearVideo(); toast('No se pudo abrir ese vídeo'); };
         v.onloadeddata = function () {
           if (!(v.duration > 0)) { clearVideo(); toast('No se pudo abrir ese vídeo'); return; }
-          v.onseeked = function () { v.onseeked = null; st.video = v; st.photo = v; st.photoIsVideo = true; $('#sh-bg-rm').hidden = false; $('#sh-vd-rm').hidden = false; $('#sh-vid-box').hidden = false; draw();
+          v.onseeked = function () { v.onseeked = null; st.video = v; st.vkey = key; st[key] = v; $('#' + id + '-rm').hidden = false; $('#sh-vid-box').hidden = st.layout !== 'std'; draw();
             var np = window.Share.partsOf(v); if (np > 1) toast('El vídeo dura ' + Math.round(v.duration) + ' s: se grabará en ' + np + ' partes de 60 s (límite de Instagram)'); };
           try { v.currentTime = Math.min(0.2, v.duration / 2); } catch (e) {}
         };
         v.src = vurl;
       };
-      ['cam', 'gal'].forEach(function (k) { $('#sh-vd-' + k).addEventListener('change', function (e) { pickVideo(e.target.files[0]); e.target.value = ''; }); });
-      $('#sh-vd-rm').addEventListener('click', function () { clearVideo(); this.hidden = true; $('#sh-vid-box').hidden = true; draw(); });
-      $('#sh-bg-rm').addEventListener('click', function () { if (st.video) { clearVideo(); $('#sh-vd-rm').hidden = true; $('#sh-vid-box').hidden = true; } });
-      ['cam', 'gal'].forEach(function (k) { $('#sh-bg-' + k).addEventListener('change', function () { if (st.video) { clearVideo(); $('#sh-vd-rm').hidden = true; $('#sh-vid-box').hidden = true; } }, true); });
+      [['sh-vb', 'photo', 'sh-bg'], ['sh-vf', 'board', 'sh-bd']].forEach(function (c) {
+        ['cam', 'gal'].forEach(function (k) { $('#' + c[0] + '-' + k).addEventListener('change', function (e) { pickVideo(e.target.files[0], c[1], c[0]); e.target.value = ''; }); });
+        $('#' + c[0] + '-rm').addEventListener('click', function () { clearVideo(); hideVid(); draw(); });
+        var drop = function () { if (st.video && st.vkey === c[1]) { clearVideo(); hideVid(); } };
+        $('#' + c[2] + '-rm').addEventListener('click', drop);
+        ['cam', 'gal'].forEach(function (k) { $('#' + c[2] + '-' + k).addEventListener('change', drop, true); });
+      });
       var makeVideo = function (what) {
         if (busy || !st.video) return;
         busy = true; var box = $('#sh-vprog'); box.hidden = false; $('#sh-vbar').style.width = '0%'; $('#sh-vtxt').textContent = 'Grabando… no cierres la pantalla';
         $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = true; });
-        var o = opts(); o.photo = null;
-        window.Share.recordVideoParts(o, st.video, { onProgress: function (p, i, n) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; $('#sh-vtxt').textContent = n > 1 ? 'Grabando parte ' + i + ' de ' + n + '… no cierres la pantalla' : 'Grabando… no cierres la pantalla'; } })
+        var o = opts(); if (st.vkey === 'photo') o.photo = null;
+        window.Share.recordVideoParts(o, st.video, { role: st.vkey, onProgress: function (p, i, n) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; $('#sh-vtxt').textContent = n > 1 ? 'Grabando parte ' + i + ' de ' + n + '… no cierres la pantalla' : 'Grabando… no cierres la pantalla'; } })
           .then(function (v) {
             $('#sh-vtxt').textContent = what === 'share' ? 'Abriendo compartir…' : 'Guardando…';
             return (what === 'share' ? window.Share.shareVideo(v, text() + ' #4TIMER') : window.Share.saveVideo(v)).then(function (r) {

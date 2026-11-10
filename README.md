@@ -118,3 +118,6 @@ En «Compartir entreno» hay un selector de estilo: **Normal**, **Carrete 3 + fo
 
 ### Quitar carteles en la tarjeta de compartir
 En la pantalla de compartir hay dos casillas: **Mostrar el cartel del modo y el nombre** y **Mostrar el marcador (tiempo / resultado)**. Desmárcalas para dejar la foto o el vídeo limpios; los ejercicios y el pie se recolocan solos. Funciona con todos los estilos, formatos y con el vídeo.
+
+### Foto / vídeo frontal y de fondo
+La pantalla de compartir tiene **Foto de fondo**, **Vídeo de fondo**, **Foto frontal** y **Vídeo frontal**. El frontal va enmarcado delante (donde antes estaba la «foto de la pizarra») y el de fondo ocupa toda la tarjeta. Se puede combinar foto de fondo + vídeo frontal, o vídeo de fondo + foto frontal. Solo un vídeo a la vez.
