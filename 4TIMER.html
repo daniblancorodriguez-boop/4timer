@@ -1774,9 +1774,11 @@ svg { overflow: visible; }
   function drawScene(ctx, sc, o) {
     o = o || {}; var fm = FORMATS[sc.format] || FORMATS.story, W = fm.w, H = fm.h, k = o.scale || 1;
     ctx.save(); ctx.scale(k, k);
-    ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-    var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9); g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9); g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)'); ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    if (!o.noBg) {
+      ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
+      var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9); g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9); g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)'); ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    }
     sc.elements.forEach(function (e) { drawElement(ctx, sc, e, W, H, o); });
     if (o.sel) sc.elements.forEach(function (e) { if (e.id === o.sel) drawSel(ctx, e, W, H, o.pxs || 3); });
     ctx.restore();
@@ -1945,8 +1947,25 @@ svg { overflow: visible; }
           var m = mime.split(';')[0]; done = true;
           resolve({ blob: new Blob(chunks, { type: m }), mime: m, ext: m.indexOf('mp4') >= 0 ? 'mp4' : 'webm' });
         };
+        /* Lo que no es vídeo se dibuja UNA vez por tramo de capas; en cada fotograma solo se actualizan los vídeos (mucho más ligero en el móvil) */
+        var layers = [], run = [], first = true;
+        function flush() { if (!run.length && !first) return; var c = root.document.createElement('canvas'); c.width = cv.width; c.height = cv.height; drawScene(c.getContext('2d'), { format: sc.format, r: sc.r, logo: sc.logo, gymName: sc.gymName, elements: run }, { scale: scale, noBg: !first }); layers.push({ img: c }); run = []; first = false; }
+        sc.elements.forEach(function (e) {
+          if (e.type === 'media' && e.media && e.media.kind === 'video') { flush(); layers.push({ vid: e }); } else run.push(e);
+        });
+        if (run.length) flush();
+        function paint() {
+          layers.forEach(function (L) {
+            if (L.img) ctx.drawImage(L.img, 0, 0);
+            else { ctx.save(); ctx.scale(scale, scale); drawElement(ctx, sc, L.vid, fm.w, fm.h, {}); ctx.restore(); }
+          });
+        }
+        var wall0 = 0, lastT = -1, lastAt = 0;
         function frame() {
-          drawScene(ctx, sc, { scale: scale });
+          var nowW = root.performance.now(); if (!wall0) { wall0 = nowW; lastAt = nowW; }
+          if (video.currentTime !== lastT) { lastT = video.currentTime; lastAt = nowW; }
+          paint();
+          if (nowW - lastAt > 5000 || nowW - wall0 > (dur + 8) * 1000) { try { rec.stop(); } catch (e) {} finish(); return; }   // el vídeo se atascó: se cierra lo grabado
           if (opts.onProgress) opts.onProgress(Math.max(0, Math.min(1, (video.currentTime - t0) / dur)));
           if (video.ended || video.currentTime >= end - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
           raf = root.requestAnimationFrame(frame);
@@ -3407,7 +3426,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
