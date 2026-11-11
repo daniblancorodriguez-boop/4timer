@@ -402,3 +402,5 @@ svg { overflow: visible; }
 .ed-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .ed-add-l { color: var(--muted); font-size: 19px; flex: 1 0 100%; }
 .ed-add .btn { flex: 0 1 auto; }
+
+.appver { color: var(--muted); font-size: 17px; font-weight: 600; letter-spacing: .02em; align-self: flex-start; margin-top: 6px; opacity: .85; }

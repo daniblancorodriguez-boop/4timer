@@ -3,6 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
+  var APP_VERSION = '1.5.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -130,6 +131,7 @@
     var html = '<div class="screen">' +
       '<div class="top"><div class="grow"><div class="wordmark"><span class="four">4</span>TIMER</div>' +
       (s.gymName ? '<div class="gymname">' + esc(s.gymName) + '</div>' : '') + '</div>' +
+      '<span class="appver">v' + APP_VERSION + '</span>' +
       '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt="' + esc(s.gymName || 'Logo del gimnasio') + '">' +
       '<button class="icon-btn" data-nav="#/settings" aria-label="Ajustes">' + ICON.gear + '</button></div>' +
       '<p class="sr-only">Elige el tipo de entrenamiento</p><ul class="modes">';
