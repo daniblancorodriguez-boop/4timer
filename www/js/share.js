@@ -3,8 +3,7 @@
   'use strict';
   var FORMATS = {
     story: { w: 1080, h: 1920, label: 'Story' },
-    post: { w: 1080, h: 1350, label: 'Post' },
-    land: { w: 1920, h: 1080, label: 'Horizontal' }
+    post: { w: 1080, h: 1350, label: 'Publicación' }
   };
   var F = '"Barlow Condensed", "Arial Narrow", sans-serif';
   var RED = '#ff2d2d', BLUE = '#3a74ff', ORANGE = '#f5921e', MUTED = '#a3a3aa';
@@ -73,10 +72,10 @@
   }
 
   /* Marcador: recuadro oscuro con etiqueta y LED (rondas/tiempo) o texto grande (EMOM, otros). */
-  function drawStat(ctx, r, x, y, w, u, digitsH) {
+  function drawStat(ctx, r, x, y, w, u, digitsH, mode) {
     var h = 56 + digitsH + 44;
-    ctx.save(); rr(ctx, x, y, w, h, 30); ctx.fillStyle = 'rgba(0,0,0,.74)'; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(); ctx.restore();
+    if (mode !== 2) { ctx.save(); rr(ctx, x, y, w, h, 30); ctx.fillStyle = mode === 1 ? 'rgba(10,10,14,.42)' : 'rgba(0,0,0,.74)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(); ctx.restore(); }
     ctx.font = '700 40px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.label, x + 34, y + 54);
     if (r.kind === 'text') {
       ctx.textAlign = 'center'; ctx.fillStyle = RED; ctx.shadowColor = RED; ctx.shadowBlur = 18;
@@ -104,92 +103,15 @@
     return w;
   }
 
-  /* ---------- Estilos con varias fotos (solo Story): carrete + fondo, 2 fondos, collage ----------
-     o.layout: 'std' | 'strip3' | 'strip4' | 'collage'  ·  o.imgs: fotos por hueco  ·  o.placeholders: dibuja los huecos vacíos (solo en la vista previa) */
-  var LAYOUT_SLOTS = {
-    strip3: ['Fondo', 'Carrete 1', 'Carrete 2', 'Carrete 3'],
-    strip4: ['Fondo arriba', 'Fondo abajo', 'Carrete 1', 'Carrete 2', 'Carrete 3', 'Carrete 4'],
-    collage: ['Fondo', 'Foto 1', 'Foto 2', 'Foto 3']
-  };
-  function layOf(o, W, H) { return (o.layout && LAYOUT_SLOTS[o.layout] && W < H && H > 1500) ? o.layout : null; }
-  function placeholder(ctx, x, y, w, h, label, r) {
+  function placeholder(ctx, x, y, w, h, label, r, cyf) {
     ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.fillStyle = '#2b2b30'; ctx.fill();
     ctx.setLineDash([14, 12]); ctx.lineWidth = 3; ctx.strokeStyle = '#5b5b63'; ctx.stroke(); ctx.setLineDash([]);
-    var cx = x + w / 2, cy = y + h / 2, rad = Math.max(18, Math.min(46, Math.min(w, h) * 0.16));
+    var cx = x + w / 2, cy = y + h * (cyf || 0.5), rad = Math.max(18, Math.min(46, Math.min(w, h) * 0.16));
     ctx.fillStyle = '#5a5a5f'; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 7); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(3, rad / 6); ctx.beginPath(); ctx.moveTo(cx - rad * .45, cy); ctx.lineTo(cx + rad * .45, cy); ctx.moveTo(cx, cy - rad * .45); ctx.lineTo(cx, cy + rad * .45); ctx.stroke();
     ctx.fillStyle = '#9b9ba3'; ctx.font = '700 ' + Math.max(22, Math.min(34, Math.round(h * 0.12))) + 'px ' + F; ctx.textAlign = 'center'; ctx.fillText(label, cx, cy + rad + 40); ctx.textAlign = 'left';
     ctx.restore();
   }
-  function slot(ctx, o, img, x, y, w, h, label, r) {
-    if (img) { ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.clip(); cover(ctx, img, x, y, w, h); ctx.restore(); }
-    else if (o.placeholders) placeholder(ctx, x, y, w, h, label, r);
-  }
-  function artLayout(ctx, o, lay, x0, top, cw, bottom) {
-    var im = o.imgs || [], R = bottom - top, i, k;
-    if (lay === 'strip3') {                                   // tira de fotomatón, a la derecha y ligeramente girada
-      var gp = 16, pg = 24, fh = Math.floor((R - 2 * pg - 2 * gp - 40) / 3), fw = Math.round(fh * 1.4), sw = fw + 2 * pg, sh = 3 * fh + 2 * gp + 2 * pg + 40;
-      ctx.save(); ctx.translate(x0 + cw - sw / 2 - 8, top + R / 2); ctx.rotate(0.05);
-      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 12; ctx.fillStyle = '#efeee9'; rr(ctx, -sw / 2, -sh / 2, sw, sh, 8); ctx.fill(); ctx.shadowColor = 'transparent';
-      for (i = 0; i < 3; i++) slot(ctx, o, im[1 + i], -fw / 2, -sh / 2 + pg + i * (fh + gp), fw, fh, 'Carrete ' + (i + 1), 2);
-      ctx.fillStyle = '#6a6a66'; ctx.font = '700 italic 26px ' + F; ctx.textAlign = 'center'; ctx.fillText('4TIME · 4TIMER', 0, sh / 2 - 16); ctx.textAlign = 'left';
-      ctx.restore();
-    } else if (lay === 'strip4') {                            // carrete de película inclinado, a la izquierda
-      var gp4 = 14, pg4 = 30, sh4 = R + 40, fh4 = Math.floor((sh4 - 3 * gp4 - 2 * pg4) / 4), fw4 = Math.round(fh4 * 1.2), sw4 = fw4 + 2 * 38;
-      ctx.save(); ctx.translate(x0 + sw4 / 2 + 6, top + R / 2 - 10); ctx.rotate(-0.15);
-      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 10; ctx.fillStyle = '#0b0b0c'; ctx.fillRect(-sw4 / 2, -sh4 / 2, sw4, sh4); ctx.shadowColor = 'transparent';
-      ctx.fillStyle = 'rgba(230,229,222,.9)';
-      for (k = -sh4 / 2 + 14; k < sh4 / 2 - 22; k += 40) { rr(ctx, -sw4 / 2 + 9, k, 20, 24, 5); ctx.fill(); rr(ctx, sw4 / 2 - 29, k, 20, 24, 5); ctx.fill(); }
-      for (i = 0; i < 4; i++) slot(ctx, o, im[2 + i], -fw4 / 2, -sh4 / 2 + pg4 + i * (fh4 + gp4), fw4, fh4, 'Carrete ' + (i + 1), 3);
-      ctx.restore();
-    } else if (lay === 'collage') {                           // tres fotos principales solapadas sobre la de fondo
-      var ph = Math.round(R * 0.54), pw = Math.round(ph * 0.75), bw = 9;
-      var card = function (x, y, a, img, label, white) {
-        ctx.save(); ctx.translate(x + pw / 2, y + ph / 2); ctx.rotate(a);
-        ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8; ctx.fillStyle = white ? '#f4f3ee' : '#111'; ctx.fillRect(-pw / 2 - bw, -ph / 2 - bw, pw + 2 * bw, ph + 2 * bw); ctx.shadowColor = 'transparent';
-        slot(ctx, o, img, -pw / 2, -ph / 2, pw, ph, label, 0); ctx.restore();
-      };
-      card(x0 + cw - pw - 6, top + 4, 0.025, im[1], 'Foto 1', false);
-      card(x0 + cw * 0.34 - pw / 2 + 40, top + R * 0.30, -0.02, im[2], 'Foto 2', true);
-      card(x0 + cw - pw - 30, top + R - ph - 4, 0.02, im[3], 'Foto 3', false);
-    }
-  }
-
-  function background(ctx, o, W, H) {
-    var lay = layOf(o, W, H);
-    if (lay) {
-      ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-      var im0 = (o.imgs || [])[0], im1 = (o.imgs || [])[1];
-      if (lay === 'strip4') { slot(ctx, o, im0, 0, 0, W, H / 2, 'Fondo arriba', 0); slot(ctx, o, im1, 0, H / 2, W, H / 2, 'Fondo abajo', 0); }
-      else slot(ctx, o, im0, 0, 0, W, H, 'Fondo', 0);
-      var tp = ctx.createLinearGradient(0, 0, 0, 360); tp.addColorStop(0, 'rgba(0,0,0,.65)'); tp.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tp; ctx.fillRect(0, 0, W, 360);
-      var bt = ctx.createLinearGradient(0, H * 0.45, 0, H); bt.addColorStop(0, 'rgba(0,0,0,0)'); bt.addColorStop(0.5, 'rgba(0,0,0,.78)'); bt.addColorStop(1, 'rgba(0,0,0,.94)'); ctx.fillStyle = bt; ctx.fillRect(0, H * 0.45, W, H * 0.55);
-      return;
-    }
-    if (!o.overlay) { ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H); }
-    if (o.photo || o.overlay) {
-      if (!o.overlay) cover(ctx, o.photo, 0, 0, W, H);
-      var top = ctx.createLinearGradient(0, 0, 0, 360); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = top; ctx.fillRect(0, 0, W, 360);
-      var bot = ctx.createLinearGradient(0, H * 0.3, 0, H); bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(0.55, 'rgba(0,0,0,.78)'); bot.addColorStop(1, 'rgba(0,0,0,.93)');
-      ctx.fillStyle = bot; ctx.fillRect(0, H * 0.3, W, H * 0.7);
-    } else {
-      var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9);
-      g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9);
-      g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)');
-      ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
-    }
-  }
-  function drawBoard(ctx, img, x, y, w, h, o) {
-    var bs = imgSize(img), bk = Math.min(w / bs.w, h / bs.h), bw = bs.w * bk, bh = bs.h * bk, bx = x + (w - bw) / 2, by = y + (h - bh) / 2;
-    if (o) o.__boardRect = { x: bx, y: by, w: bw, h: bh };
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 30; ctx.fillStyle = '#000'; rr(ctx, bx, by, bw, bh, 26); ctx.fill(); ctx.restore();
-    ctx.save(); rr(ctx, bx, by, bw, bh, 26); ctx.clip(); ctx.drawImage(img, bx, by, bw, bh); ctx.restore();
-    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, bx, by, bw, bh, 26); ctx.stroke();
-  }
-
   /* Recorrido dibujado sin mapa (privacidad): línea neón normalizada al recuadro */
   function drawRoute(ctx, route, x, y, w, h, map) {
     ctx.save(); rr(ctx, x, y, w, h, 26); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill();
@@ -217,150 +139,266 @@
     ctx.restore();
   }
 
-  /* o: { format:'story'|'post'|'land', style:'std'|'logo', photo, board, logo, gymName, showExercises,
-          r: {modeName, name, kind:'rounds'|'time'|'text', value, sub, label, pr, lines:[{num, parts:[{qty,name}], note}], date} } */
-  function render(canvas, o) {
-    return fontsReady().then(function () {
-      var r0 = o.r, wantMap = r0.kind === 'run' && o.map && r0.route && r0.route.length > 1 && !o.board && root.RunMap;
-      if (!wantMap) return doRender(canvas, o, null);
-      var probe = {}; doRender(root.document.createElement('canvas'), o, null, probe);       // 1.ª pasada: solo mide el hueco del recorrido
-      if (!probe.w) return doRender(canvas, o, null);
-      return root.RunMap.render(r0.route, probe.w, probe.h).then(function (m) { return doRender(canvas, o, m.loaded ? m : null); });
-    });
+  /* ---------- Escena editable: la tarjeta es una lista de elementos (de atrás hacia delante) ----------
+     elemento: { id, type, x, y, w, h (fracciones del lienzo, esquina sup. izq.), rot (rad), style (0..2), media:{el,kind,url}|null, fixed (fondo fijo) }
+     tipos: media · title · stat · exercises · logo · brand · footer · route */
+  var seqId = 0;
+  var TYPE_LABEL = { media: 'Foto / vídeo', title: 'Cartel del entreno', stat: 'Marcador', exercises: 'Ejercicios', logo: 'Logo', brand: '4TIMER', footer: 'Fecha y pie', route: 'Recorrido' };
+  var STYLES = { media: ['Recto', 'Redondeado', 'Polaroid'], title: ['Cartel', 'Cristal', 'Solo texto'], stat: ['Marcador', 'Cristal', 'Solo cifras'], exercises: ['Texto', 'Cristal', 'Oscuro'], route: ['Línea', 'Mapa real'] };
+  function mk(type, px, extra) {                                  // px = [x, y, w, h] sobre un lienzo Story de 1080×1920
+    var e = { id: 'e' + (++seqId), type: type, x: px[0] / 1080, y: px[1] / 1920, w: px[2] / 1080, h: px[3] / 1920, rot: 0, style: 0, media: null, fixed: false };
+    for (var k in extra) e[k] = extra[k];
+    return e;
   }
-  function doRender(canvas, o, mapPre, probe) {
-    {
-      var fmtDef = FORMATS[o.format] || FORMATS.story, W = fmtDef.w, H = fmtDef.h, land = W > H, pad = 64, cw = W - pad * 2;
-      var big = o.style === 'logo';
-      canvas.width = W; canvas.height = H;
-      var ctx = canvas.getContext('2d'), r = o.r;
-      ctx.textBaseline = 'alphabetic';
-      background(ctx, o, W, H);
+  function bg(rect, label) { return mk('media', rect || [0, 0, 1080, 1920], { fixed: true, label: label || 'Fondo' }); }
+  function std(run, o) {                                          // logo + marca arriba, bloque de resultado abajo
+    o = o || {};
+    var L = [mk('logo', [64, 64, 160, 160]), mk('brand', [600, 64, 416, 112])];
+    if (run && o.route) L.push(mk('route', o.route));
+    return L;
+  }
+  function bottom(o) {
+    o = o || {}; var L = [];
+    L.push(mk('title', [64, o.ty || 1140, 952, 196]));
+    L.push(mk('stat', [64, o.sy || 1350, 952, 414]));
+    L.push(mk('footer', [64, 1790, 952, 66]));
+    return L;
+  }
+  var TEMPLATES = [
+    { id: 'clasica', name: 'Clásica', make: function (run) {
+      var L = [bg()].concat(std(run, { route: [64, 250, 952, 460] }));
+      L.push(mk('title', [64, 760, 952, 190]), mk('stat', [64, 960, 952, 414]), mk('exercises', [64, 1400, 952, 360]), mk('footer', [64, 1790, 952, 66]));
+      return L; } },
+    { id: 'pizarra', name: 'Foto frontal', make: function () {
+      var L = [bg()].concat(std(false));
+      L.push(mk('media', [64, 250, 952, 480], { style: 1, label: 'Foto frontal' }), mk('title', [64, 760, 952, 190]), mk('stat', [64, 960, 952, 414]), mk('exercises', [64, 1400, 952, 360]), mk('footer', [64, 1790, 952, 66]));
+      return L; } },
+    { id: 'arriba', name: 'Ejercicios arriba', make: function (run) {
+      var L = [bg()].concat(std(run, { route: [64, 720, 952, 400] }));
+      L.push(mk('exercises', [64, 260, 790, 420], { style: 1 }));
+      return L.concat(bottom()); } },
+    { id: 'limpia', name: 'Solo resultado', make: function (run) {
+      return [bg()].concat(std(run, { route: [64, 250, 952, 460] }), bottom()); } },
+    { id: 'carrete3', name: 'Carrete 3 + fondo', make: function () {
+      var L = [bg()].concat(std(false));
+      for (var i = 0; i < 3; i++) L.push(mk('media', [680, 280 + i * 290, 340, 255], { style: 2, rot: 0.05, label: 'Carrete ' + (i + 1) }));
+      return L.concat(bottom()); } },
+    { id: 'carrete4', name: 'Carrete 4 + 2 fondos', make: function () {
+      var L = [bg([0, 0, 1080, 960], 'Fondo arriba'), bg([0, 960, 1080, 960], 'Fondo abajo')].concat(std(false));
+      for (var i = 0; i < 4; i++) L.push(mk('media', [70, 270 + i * 215, 290, 190], { style: 2, rot: -0.12, label: 'Carrete ' + (i + 1) }));
+      return L.concat(bottom()); } },
+    { id: 'collage', name: 'Collage 3 + fondo', make: function () {
+      var L = [bg()].concat(std(false));
+      L.push(mk('media', [640, 250, 380, 490], { style: 2, rot: 0.03, label: 'Foto 1' }), mk('media', [290, 520, 380, 490], { style: 2, rot: -0.03, label: 'Foto 2' }), mk('media', [620, 760, 380, 360], { style: 2, rot: 0.02, label: 'Foto 3' }));
+      return L.concat(bottom()); } }
+  ];
+  /* Escena nueva: plantilla + datos. pool: medios ya cargados que se reparten por los huecos libres (en orden) */
+  function makeScene(tplIdx, format, data) {
+    var t = TEMPLATES[tplIdx] || TEMPLATES[0], sc = { tpl: tplIdx, format: format === 'post' ? 'post' : 'story', r: data.r, logo: data.logo || null, gymName: data.gymName || '', elements: t.make(!!data.isRun) };
+    var pool = (data.pool || []).slice();
+    sc.elements.forEach(function (e) { if (e.type === 'media' && !e.media && pool.length) e.media = pool.shift(); });
+    sc.spare = pool;
+    return sc;
+  }
+  function mediaOf(sc) { return sc.elements.filter(function (e) { return e.type === 'media' && e.media; }).map(function (e) { return e.media; }); }
+  function newElement(type, sc) {
+    var e = mk(type, { media: [260, 700, 560, 560], title: [64, 800, 952, 190], stat: [64, 700, 952, 414], exercises: [64, 700, 952, 360], logo: [64, 64, 160, 160], brand: [600, 64, 416, 112], footer: [64, 1790, 952, 66], route: [64, 600, 952, 460] }[type]);
+    return e;
+  }
 
-      // ----- fila superior: logo del gimnasio (izq.) y marca 4TIMER (dcha.) -----
-      var round = !!(o.logo && o.logo.__round);                      // logo circular de serie: sin fondo ni recorte rectangular
-      var logoH = (big ? (land ? 220 : 300) : (land ? 112 : 132)) * (round ? 1.18 : 1), logoMaxW = big ? (land ? 620 : 600) : 400, wm = big ? 66 : (land ? 80 : 92);
-      if (o.logo) {
-        var ls = imgSize(o.logo), k = Math.min(logoMaxW / ls.w, logoH / ls.h), lw = ls.w * k, lh = ls.h * k;
-        if (round) ctx.drawImage(o.logo, pad, pad, lw, lh);
-        else { ctx.save(); rr(ctx, pad, pad, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(pad, pad, lw, lh);
-        ctx.drawImage(o.logo, pad, pad, lw, lh); ctx.restore(); }
-      } else if (o.gymName) {
-        ctx.font = '800 italic ' + (big ? 96 : 64) + 'px ' + F; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(o.gymName, pad, pad + (big ? 110 : 70));
-      }
-      var wmY = big ? pad + logoH / 2 + wm * 0.36 : pad + 96 * wm / 92;
-      ctx.textAlign = 'right'; ctx.font = '800 italic ' + wm + 'px ' + F;
-      var tw = ctx.measureText('TIMER').width; ctx.fillStyle = '#fff'; ctx.fillText('TIMER', W - pad, wmY);
-      ctx.lineWidth = Math.max(3, wm / 23); ctx.strokeStyle = ORANGE; ctx.lineJoin = 'round';
-      ctx.strokeText('4', W - pad - tw - 4, wmY);
-      ctx.textAlign = 'left';
-      var topLimit = pad + logoH + 40;
-
-      var routeBoard = r.kind === 'run' && r.route && r.route.length > 1 && !o.board, hasBoard = !!(o.board || routeBoard);
-      function drawB(x, y, w, h) { if (routeBoard) { if (probe) { probe.w = Math.round(w); probe.h = Math.round(h); } drawRoute(ctx, r.route, x, y, w, h, mapPre); } else drawBoard(ctx, o.board, x, y, w, h, o); }
-      var exAll = (o.showExercises && r.lines) ? r.lines : [];
-      var chipH = 60, gap = 26, lineH = 62, footY = H - pad;
-      var showT = !o.hideTitle, showS = !o.hideStat;        // se pueden quitar el cartel del modo/nombre y el marcador
-
-      function footer() {
-        ctx.font = '600 38px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.date, pad, footY);
-        ctx.textAlign = 'right'; ctx.fillText('Hecho con 4TIMER', W - pad, footY); ctx.textAlign = 'left';
-      }
-      function chip(y) {
-        ctx.font = '800 italic 38px ' + F;
-        var chipW = ctx.measureText(r.modeName).width + 44;
-        ctx.fillStyle = ORANGE; rr(ctx, pad, y, chipW, chipH, chipH / 2); ctx.fill();
-        ctx.fillStyle = '#1b1203'; ctx.fillText(r.modeName, pad + 22, y + 42);
-        if (r.pr) drawPR(ctx, pad + chipW + 16, y, chipH);
-      }
-
-      // ================= HORIZONTAL 16:9 =================
-      if (land) {
-        var colW = 880, rx = pad + colW + 70, rw = W - pad - rx;
-        var y0 = topLimit - 10;
-        if (showT) chip(y0);
-        var ty = y0 + (showT ? chipH + gap / 2 : 0), tf = '800 italic 88px ' + F;
-        ctx.font = tf; ctx.fillStyle = '#fff';
-        var tl = showT ? wrap(ctx, r.name, colW, 2) : [];
-        tl.forEach(function (t, i) { ctx.fillText(t, pad, ty + 78 + i * 90); });
-        var ly = ty + tl.length * 90 + 24, lroom = footY - 70 - ly;
-        if (hasBoard && lroom > 160) drawB(pad, ly, colW, lroom);
-        else {
-          var maxE = Math.max(0, Math.min(9, Math.floor(lroom / lineH))), sh = exAll.slice(0, maxE), mo = exAll.length - sh.length;
-          if (mo > 0 && sh.length > 1) { sh = sh.slice(0, sh.length - 1); mo = exAll.length - sh.length; } else if (mo > 0) { sh = []; mo = 0; }
-          sh.forEach(function (ln, i) { drawExercise(ctx, ln, pad, ly + 44 + i * lineH, colW); });
-          if (mo > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + mo + ' más', pad, ly + 44 + sh.length * lineH); }
-        }
-        // marcador a la derecha, centrado en vertical
-        var probe = r.kind === 'rounds' ? '00' : r.kind === 'run' ? '00.00' : '00:00', uu = Math.min(3.6, (rw - 76) / root.LED.measure(probe, 1)), dH = 96 * uu, stH = 56 + dH + 44;
-        var areaTop = topLimit - 10, areaH = footY - 70 - areaTop, sy = areaTop + Math.max(0, (areaH - stH - 70) / 2);
-        if (showS) {
-          drawStat(ctx, r, rx, sy, rw, uu, dH);
-          ctx.font = '700 46px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-          ctx.fillText(r.sub || '', rx + rw / 2, sy + stH + 56); ctx.textAlign = 'left';
-        }
-        footer();
-        return canvas;
-      }
-
-      // ================= VERTICAL (story / post) =================
-      var lay = layOf(o, W, H);
-      if (lay) { exAll = []; hasBoard = false; }          // estilos con fotos: solo marcador, sin lista ni pizarra
-      var exTop = !!o.exTop && exAll.length > 0;      // ejercicios arriba a la izquierda (semitransparentes); el marcador baja al fondo
-      var u = ((hasBoard && H < 1500) || lay) ? 1.9 : 2.6, digitsH = 96 * u, statH = 56 + digitsH + 44, subH = 64, footerH = 70;
-      var titleFont = '800 italic 98px ' + F;
-      ctx.font = titleFont;
-      var titleLines = wrap(ctx, r.name, cw, 2), titleH = titleLines.length * 100 + 14;
-      var fixed = footerH + (showS ? subH + statH : 0) + (showT ? titleH + chipH + gap : 0) + gap + gap;
-      var room = H - pad - topLimit - fixed - gap;
-      var boardMin = hasBoard ? (H > 1500 ? 560 : 400) : 0;
-      var maxEx = Math.max(0, Math.min(9, Math.floor((room - boardMin) / lineH)));
-      if (exTop) maxEx = 0;
-      var shown = exAll.slice(0, maxEx), more = exAll.length - shown.length;
-      if (more > 0 && shown.length) { shown = shown.slice(0, shown.length - 1); more = exAll.length - shown.length; }
-      if (!shown.length || (hasBoard && more > 0 && shown.length < 2)) { shown = []; more = 0; }   // sin hueco: mejor no mostrar una lista a medias
-      var exH = shown.length ? shown.length * lineH + (more > 0 ? lineH : 0) + gap : 0;
-      var y = H - pad - (fixed + exH);
-
-      var tyTop = topLimit + 6, tShown = [], tMore = 0, pw = 0, ph = 0;
-      if (exTop) {
-        var tLines = Math.max(1, Math.min(9, Math.floor((y - 30 - tyTop - 24) / lineH)));
-        tShown = exAll.slice(0, tLines); tMore = exAll.length - tShown.length;
-        if (tMore > 0 && tShown.length > 1) { tShown = tShown.slice(0, tShown.length - 1); tMore = exAll.length - tShown.length; }
-        pw = Math.round(cw * 0.74); ph = tShown.length * lineH + (tMore > 0 ? lineH : 0) + 34;
-      }
-      if (hasBoard) {
-        var bTop = topLimit;
-        if (exTop && y - 30 - (tyTop + ph + 20) >= 420) bTop = tyTop + ph + 20;       // la pizarra va debajo de la lista si cabe
-        var bh2 = y - 30 - bTop; if (bh2 > 160) drawB(pad, bTop, cw, bh2);
-      }
-      if (exTop) {
-        ctx.save(); rr(ctx, pad - 22, tyTop, pw + 22, ph, 26); ctx.fillStyle = 'rgba(0,0,0,.46)'; ctx.fill(); ctx.restore();
-        ctx.save(); ctx.globalAlpha = 0.93;
-        tShown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, tyTop + 50 + i * lineH, pw - 30); });
-        if (tMore > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + tMore + ' más', pad, tyTop + 50 + tShown.length * lineH); }
-        ctx.restore();
-      }
-
-      if (lay) artLayout(ctx, o, lay, pad, topLimit, cw, y - 28);
-      if (showT) {
-        chip(y); y += chipH + gap / 2;
-        ctx.font = titleFont; ctx.fillStyle = '#fff';
-        titleLines.forEach(function (t, i) { ctx.fillText(t, pad, y + 88 + i * 100); });
-        y += titleH + gap / 2;
-      }
-      if (showS) {
-        drawStat(ctx, r, pad, y, cw, u, digitsH);
-        y += statH + 14;
-        ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-        ctx.fillText(r.sub || '', W / 2, y + 40); ctx.textAlign = 'left';
-        y += subH - 14 + gap / 2;
-      }
-      shown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, y + 44 + i * lineH, cw); });
-      if (more > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + more + ' más', pad, y + 44 + shown.length * lineH); }
-      footer();
-      return canvas;
+  function mediaDims(m) { var el = m.el; return { w: el.naturalWidth || el.videoWidth || el.width, h: el.naturalHeight || el.videoHeight || el.height }; }
+  function drawMediaFill(ctx, m, x, y, w, h) { try { cover(ctx, m.el, x, y, w, h); } catch (e) {} }
+  function scrim(ctx, w, h, part) {                                // oscurece arriba y/o abajo para que se lea el texto sobre la foto
+    if (part === 'bottom') { var bb = ctx.createLinearGradient(0, h * 0.4, 0, h); bb.addColorStop(0, 'rgba(0,0,0,0)'); bb.addColorStop(1, 'rgba(0,0,0,.85)'); ctx.fillStyle = bb; ctx.fillRect(0, h * 0.4, w, h * 0.6); return; }
+    var th = Math.min(360, h * 0.2), top = ctx.createLinearGradient(0, 0, 0, th); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = top; ctx.fillRect(0, 0, w, th);
+    if (part === 'top') return;
+    var bot = ctx.createLinearGradient(0, h * 0.3, 0, h); bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(0.55, 'rgba(0,0,0,.78)'); bot.addColorStop(1, 'rgba(0,0,0,.93)');
+    ctx.fillStyle = bot; ctx.fillRect(0, h * 0.3, w, h * 0.7);
+  }
+  function drawMedia(ctx, e, w, h, o) {
+    var m = e.media, st = e.style | 0;
+    if (!m) {
+      if (!o.placeholders) return;
+      if (o.ghost) { ctx.fillStyle = '#2b2b30'; ctx.fillRect(0, 0, w, h); return; }
+      placeholder(ctx, 0, 0, w, h, e.label || 'Foto o vídeo', st === 1 ? 26 : 0, e.fixed && e.h > 0.9 ? 0.2 : 0.5); return;
     }
+    if (st === 2) {                                                // polaroid
+      var pd = Math.max(8, Math.min(w, h) * 0.045);
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8; ctx.fillStyle = '#f4f3ee'; ctx.fillRect(0, 0, w, h); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(pd, pd, w - 2 * pd, h - 2 * pd); ctx.clip(); drawMediaFill(ctx, m, pd, pd, w - 2 * pd, h - 2 * pd); ctx.restore();
+    } else if (st === 1) {                                         // redondeado con sombra y borde fino
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 30; ctx.fillStyle = '#000'; rr(ctx, 0, 0, w, h, 26); ctx.fill(); ctx.restore();
+      ctx.save(); rr(ctx, 0, 0, w, h, 26); ctx.clip(); drawMediaFill(ctx, m, 0, 0, w, h); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, 0, 0, w, h, 26); ctx.stroke();
+    } else {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip(); drawMediaFill(ctx, m, 0, 0, w, h);
+      if (e.fixed) scrim(ctx, w, h, e.h > 0.9 ? '' : e.y < 0.01 ? 'top' : 'bottom');   // fondo: sombreado para leer el texto
+      ctx.restore();
+    }
+  }
+  function chipAt(ctx, r, x, y, s) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.font = '800 italic 38px ' + F;
+    var cwid = ctx.measureText(r.modeName).width + 44;
+    ctx.fillStyle = ORANGE; rr(ctx, 0, 0, cwid, 60, 30); ctx.fill();
+    ctx.fillStyle = '#1b1203'; ctx.fillText(r.modeName, 22, 42);
+    if (r.pr) drawPR(ctx, cwid + 16, 0, 60);
+    ctx.restore();
+  }
+  function drawTitle(ctx, r, w, h, st) {
+    var box = st === 1, pad = box ? Math.min(26, h * 0.12) : 0, iw = w - 2 * pad, ih = h - 2 * pad, chip = st !== 2, name = String(r.name || '').replace(/\s+/g, ' ').trim() || r.modeName;
+    if (box) { ctx.save(); rr(ctx, 0, 0, w, h, 26); ctx.fillStyle = 'rgba(0,0,0,.52)'; ctx.fill(); ctx.restore(); }
+    var fs = Math.min(150, ih), lines = [name], chH;
+    for (; fs >= 22; fs -= 4) {
+      ctx.font = '800 italic ' + fs + 'px ' + F; lines = wrap(ctx, name, iw, 2);
+      chH = chip ? fs * 0.62 + fs * 0.16 : 0;
+      if (chH + lines.length * fs * 1.02 <= ih + 1 && lines.join(' ') === name) break;
+    }
+    chH = chip ? fs * 0.62 + fs * 0.16 : 0;
+    if (chip) chipAt(ctx, r, pad, pad, (fs * 0.62) / 60);
+    ctx.font = '800 italic ' + fs + 'px ' + F; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+    lines.forEach(function (t, i) { ctx.fillText(t, pad, pad + chH + fs * 0.84 + i * fs * 1.02); });
+  }
+  function statLedW(r) { var p = r.kind === 'rounds' ? '00' : r.kind === 'run' ? '00.00' : '00:00'; return root.LED.measure(p, 2.6); }
+  function drawStatEl(ctx, r, w, h, st) {
+    var REFH = 349.6 + 64, k = h / REFH;
+    if (r.kind !== 'text') k = Math.min(k, w / (statLedW(r) + 110));
+    var rw = w / k;
+    ctx.save(); ctx.scale(k, k);
+    drawStat(ctx, r, 0, 0, rw, 2.6, 96 * 2.6, st);
+    ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center'; ctx.fillText(r.sub || '', rw / 2, 349.6 + 54); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  function drawExEl(ctx, r, w, h, st, o) {
+    var lines = r.lines || [], n = lines.length;
+    if (!n) { if (o.placeholders && !o.ghost) { ctx.save(); rr(ctx, 0, 0, w, h, 20); ctx.setLineDash([14, 12]); ctx.lineWidth = 3; ctx.strokeStyle = '#8a8a92'; ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#9b9ba3'; ctx.font = '700 36px ' + F; ctx.textAlign = 'center'; ctx.fillText('Ejercicios', w / 2, h / 2 + 12); ctx.restore(); } return; }
+    var pad = st ? 22 : 0, avail = h - 2 * pad, s = Math.min(1.25, avail / (n * 62)), cnt = n;
+    if (s < 0.5) { s = 0.5; cnt = Math.max(1, Math.floor(avail / (62 * s)) - 1); }
+    var shown = lines.slice(0, cnt), more = n - shown.length, ch = Math.min(h, (shown.length * 62 + (more > 0 ? 62 : 0)) * s + 2 * pad + (st ? 4 : 0));
+    if (st) { ctx.save(); rr(ctx, 0, 0, w, ch, 26); ctx.fillStyle = st === 1 ? 'rgba(0,0,0,.46)' : 'rgba(10,10,12,.88)'; ctx.fill(); ctx.restore(); }
+    ctx.save(); ctx.translate(pad, pad); ctx.scale(s, s); var iw = (w - 2 * pad) / s;
+    if (st === 1) ctx.globalAlpha = 0.95;
+    shown.forEach(function (ln, i) { drawExercise(ctx, ln, 0, 44 + i * 62, iw); });
+    if (more > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + more + ' más', 0, 44 + shown.length * 62); }
+    ctx.restore();
+  }
+  function drawLogoEl(ctx, sc, w, h) {
+    var lg = sc.logo;
+    if (lg) {
+      var ls = imgSize(lg), k = Math.min(w / ls.w, h / ls.h), lw = ls.w * k, lh = ls.h * k, lx = (w - lw) / 2, ly = (h - lh) / 2;
+      if (lg.__round) ctx.drawImage(lg, lx, ly, lw, lh);
+      else { ctx.save(); rr(ctx, lx, ly, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(lx, ly, lw, lh); ctx.drawImage(lg, lx, ly, lw, lh); ctx.restore(); }
+    } else if (sc.gymName) {
+      var fs = Math.min(96, h * 0.7); ctx.font = '800 italic ' + fs + 'px ' + F;
+      while (fs > 20 && ctx.measureText(sc.gymName).width > w) { fs -= 4; ctx.font = '800 italic ' + fs + 'px ' + F; }
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(sc.gymName, 0, h * 0.7);
+    }
+  }
+  function drawBrandEl(ctx, w, h) {
+    var fs = Math.min(h / 1.2, 140); ctx.font = '800 italic ' + fs + 'px ' + F;
+    var tw = ctx.measureText('TIMER').width;
+    while (fs > 20 && tw + fs * 0.9 > w) { fs -= 4; ctx.font = '800 italic ' + fs + 'px ' + F; tw = ctx.measureText('TIMER').width; }
+    var by = Math.min(h, fs * 0.98);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.fillText('TIMER', w, by);
+    ctx.lineWidth = Math.max(3, fs / 23); ctx.strokeStyle = ORANGE; ctx.lineJoin = 'round'; ctx.strokeText('4', w - tw - fs * 0.04, by);
+    ctx.textAlign = 'left';
+  }
+  function drawFooterEl(ctx, r, w, h) {
+    var fs = Math.min(38, h * 0.62); ctx.font = '600 ' + fs + 'px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.date || '', 0, h * 0.72);
+    ctx.textAlign = 'right'; ctx.fillText('Hecho con 4TIMER', w, h * 0.72); ctx.textAlign = 'left';
+  }
+  function rectPx(e, W, H) { return { x: e.x * W, y: e.y * H, w: e.w * W, h: e.h * H }; }
+  function drawElement(ctx, sc, e, W, H, o) {
+    var R = rectPx(e, W, H), r = sc.r;
+    ctx.save(); ctx.translate(R.x + R.w / 2, R.y + R.h / 2); if (e.rot) ctx.rotate(e.rot); ctx.translate(-R.w / 2, -R.h / 2);
+    ctx.textBaseline = 'alphabetic';
+    if (e.type === 'media') drawMedia(ctx, e, R.w, R.h, o);
+    else if (e.type === 'title') drawTitle(ctx, r, R.w, R.h, e.style | 0);
+    else if (e.type === 'stat') drawStatEl(ctx, r, R.w, R.h, e.style | 0);
+    else if (e.type === 'exercises') drawExEl(ctx, r, R.w, R.h, e.style | 0, o);
+    else if (e.type === 'logo') drawLogoEl(ctx, sc, R.w, R.h);
+    else if (e.type === 'brand') drawBrandEl(ctx, R.w, R.h);
+    else if (e.type === 'footer') drawFooterEl(ctx, r, R.w, R.h);
+    else if (e.type === 'route' && r.route && r.route.length > 1) drawRoute(ctx, r.route, 0, 0, R.w, R.h, (e.style | 0) === 1 && e.__map && e.__map.m && e.__map.m.loaded ? e.__map.m : null);
+    ctx.restore();
+  }
+  function drawSel(ctx, e, W, H, px) {
+    var R = rectPx(e, W, H);
+    ctx.save(); ctx.translate(R.x + R.w / 2, R.y + R.h / 2); if (e.rot) ctx.rotate(e.rot); ctx.translate(-R.w / 2, -R.h / 2);
+    ctx.lineWidth = 2.5 * px; ctx.strokeStyle = ORANGE; ctx.setLineDash([9 * px, 6 * px]); ctx.strokeRect(0, 0, R.w, R.h); ctx.setLineDash([]);
+    if (!e.fixed) {                                                 // tirador de tamaño (esquina inferior derecha)
+      ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(R.w, R.h, 13 * px, 0, 7); ctx.fill();
+      ctx.lineWidth = 2.5 * px; ctx.strokeStyle = '#1b1203'; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(R.w - 6 * px, R.h + 6 * px); ctx.lineTo(R.w + 6 * px, R.h - 6 * px); ctx.moveTo(R.w + 6 * px, R.h - 1 * px); ctx.lineTo(R.w + 6 * px, R.h - 6 * px); ctx.lineTo(R.w + 1 * px, R.h - 6 * px);
+      ctx.moveTo(R.w - 6 * px, R.h + 1 * px); ctx.lineTo(R.w - 6 * px, R.h + 6 * px); ctx.lineTo(R.w - 1 * px, R.h + 6 * px); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  /* Dibuja la escena entera en ctx. o: { scale, placeholders, ghost, sel (id), pxs (px de lienzo por px de pantalla) } */
+  function drawScene(ctx, sc, o) {
+    o = o || {}; var fm = FORMATS[sc.format] || FORMATS.story, W = fm.w, H = fm.h, k = o.scale || 1;
+    ctx.save(); ctx.scale(k, k);
+    ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
+    var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9); g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9); g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)'); ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    sc.elements.forEach(function (e) { drawElement(ctx, sc, e, W, H, o); });
+    if (o.sel) sc.elements.forEach(function (e) { if (e.id === o.sel) drawSel(ctx, e, W, H, o.pxs || 3); });
+    ctx.restore();
+  }
+  /* Mapas reales (solo recorrido con estilo «Mapa real»): se descargan una vez por tamaño */
+  function prepMaps(sc) {
+    var jobs = [];
+    sc.elements.forEach(function (e) {
+      if (e.type !== 'route' || (e.style | 0) !== 1 || !root.RunMap || !sc.r.route || sc.r.route.length < 2) return;
+      var fm = FORMATS[sc.format], w = Math.round(e.w * fm.w), h = Math.round(e.h * fm.h), key = w + 'x' + h + ':' + sc.r.route.length;
+      if (e.__map && e.__map.key === key) return;
+      jobs.push(root.RunMap.render(sc.r.route, w, h).then(function (m) { e.__map = { key: key, m: m }; }).catch(function () { e.__map = { key: key, m: null }; }));
+    });
+    return jobs.length ? Promise.all(jobs) : Promise.resolve();
+  }
+  var fontsOK = false;
+  function drawTo(canvas, sc, o) {
+    var fm = FORMATS[sc.format] || FORMATS.story, k = o.scale || 1;
+    canvas.width = Math.max(1, Math.round(fm.w * k)); canvas.height = Math.max(1, Math.round(fm.h * k));
+    drawScene(canvas.getContext('2d'), sc, o);
+    return canvas;
+  }
+  /* Pinta la escena en un canvas. o.edit: huecos vacíos y selección (vista previa); sin o.edit queda lista para exportar. */
+  function render(canvas, sc, o) {
+    o = o || {}; var oo = { scale: o.scale, placeholders: !!o.edit, sel: o.edit ? o.sel : null, pxs: o.pxs };
+    var go = function () { fontsOK = true; return prepMaps(sc).then(function () { return drawTo(canvas, sc, oo); }); };
+    return fontsOK ? go() : fontsReady().then(go);
+  }
+  function renderThumb(canvas, sc, width) {
+    var fm = FORMATS[sc.format] || FORMATS.story;
+    return fontsReady().then(function () { fontsOK = true; return drawTo(canvas, sc, { scale: width / fm.w, placeholders: true, ghost: true }); });
+  }
+
+  /* ---------- Gestos sobre la escena ---------- */
+  function toLocal(e, W, H, x, y) {                                // punto del lienzo → coordenadas locales del elemento (sin giro)
+    var R = rectPx(e, W, H), dx = x - (R.x + R.w / 2), dy = y - (R.y + R.h / 2), c = Math.cos(-e.rot || 0), s = Math.sin(-e.rot || 0);
+    return { x: dx * c - dy * s + R.w / 2, y: dx * s + dy * c + R.h / 2, w: R.w, h: R.h };
+  }
+  function hitTest(sc, x, y) {
+    var fm = FORMATS[sc.format] || FORMATS.story;
+    for (var i = sc.elements.length - 1; i >= 0; i--) {
+      var e = sc.elements[i], p = toLocal(e, fm.w, fm.h, x, y);
+      if (p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h) return e;
+    }
+    return null;
+  }
+  function handleHit(sc, e, x, y, rad) {
+    var fm = FORMATS[sc.format] || FORMATS.story, p = toLocal(e, fm.w, fm.h, x, y);
+    return Math.abs(p.x - p.w) <= rad && Math.abs(p.y - p.h) <= rad;
+  }
+  function resizeBy(sc, e, e0, dx, dy) {                           // arrastrar la esquina inferior derecha; la superior izquierda queda fija
+    var fm = FORMATS[sc.format] || FORMATS.story, W = fm.w, H = fm.h, c = Math.cos(e0.rot || 0), s = Math.sin(e0.rot || 0);
+    var ldx = dx * c + dy * s, ldy = -dx * s + dy * c, nw = Math.max(0.05, e0.w + ldx / W), nh = Math.max(0.03, e0.h + ldy / H);
+    var w0 = e0.w * W, h0 = e0.h * H, cx0 = e0.x * W + w0 / 2, cy0 = e0.y * H + h0 / 2;
+    var tlx = cx0 + (-w0 / 2) * c - (-h0 / 2) * s, tly = cy0 + (-w0 / 2) * s + (-h0 / 2) * c, w1 = nw * W, h1 = nh * H;
+    var cx1 = tlx + (w1 / 2) * c - (h1 / 2) * s, cy1 = tly + (w1 / 2) * s + (h1 / 2) * c;
+    e.w = nw; e.h = nh; e.x = cx1 / W - nw / 2; e.y = cy1 / H - nh / 2;
   }
 
   function toBlob(canvas) {
@@ -425,7 +463,7 @@
   }
 
 
-  /* ---------- Vídeo: el vídeo del usuario de fondo + la tarjeta (logo, resultado, ejercicios) encima ---------- */
+  /* ---------- Vídeo: todos los vídeos de la escena se reproducen a la vez y se graba la tarjeta entera ---------- */
   var VMIMES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
   function videoMime() {
     var MR = root.MediaRecorder;
@@ -434,25 +472,24 @@
     return null;
   }
   function videoSupported() { return !!(videoMime() && root.HTMLCanvasElement && root.HTMLCanvasElement.prototype.captureStream); }
-  /* Capa con todo menos el fondo (transparente donde va el vídeo) */
-  function renderOverlay(o) {
-    var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k];
-    o2.overlay = true; o2.photo = null;
-    return render(c, o2).then(function () { return c; });
+  function videosOf(sc) { return sc.elements.filter(function (e) { return e.type === 'media' && e.media && e.media.kind === 'video'; }).map(function (e) { return e.media.el; }); }
+  function masterVideo(sc) {                                       // el más largo manda en la duración y el audio
+    var vs = videosOf(sc), best = null;
+    vs.forEach(function (v) { if (!best || (v.duration || 0) > (best.duration || 0)) best = v; });
+    return best;
   }
-  /* Graba el vídeo con la tarjeta encima. opts: { onProgress(0..1), maxSec, start } → Promise<{blob, mime, ext}> (graba desde `start` hasta `start+maxSec`) */
-  function recordVideo(o, video, opts) {
+  /* Graba desde `start` hasta `start+maxSec` (opts: { onProgress(0..1), maxSec, start }) → Promise<{blob, mime, ext}> */
+  function recordVideo(sc, opts) {
     opts = opts || {};
-    var mime = videoMime();
-    if (!mime) return Promise.reject(new Error('sin-soporte'));
-    var front = opts.role === 'board';
-    return (front ? (function () { var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k]; return render(c, o2).then(function () { c.__rect = o2.__boardRect; return c; }); })() : renderOverlay(o)).then(function (ov) {
+    var mime = videoMime(), video = masterVideo(sc), vids = videosOf(sc);
+    if (!mime || !video) return Promise.reject(new Error('sin-soporte'));
+    return fontsReady().then(function () { return prepMaps(sc); }).then(function () {
       return new Promise(function (resolve, reject) {
-        var scale = Math.min(1, 1280 / Math.max(ov.width, ov.height)), W = Math.round(ov.width * scale), H = Math.round(ov.height * scale);
-        var cv = root.document.createElement('canvas'); cv.width = W; cv.height = H;
+        var fm = FORMATS[sc.format] || FORMATS.story, scale = Math.min(1, 1280 / Math.max(fm.w, fm.h));
+        var cv = root.document.createElement('canvas'); cv.width = Math.round(fm.w * scale); cv.height = Math.round(fm.h * scale);
         var ctx = cv.getContext('2d'), t0 = opts.start || 0, end = Math.min(video.duration || 60, t0 + (opts.maxSec || 60)), dur = Math.max(0.1, end - t0);
         var stream = cv.captureStream(30), rec, chunks = [], done = false, raf = 0;
-        try {                                                   // audio del vídeo sin que suene por el altavoz (una sola vez por elemento)
+        try {                                                   // audio del vídeo principal sin que suene por el altavoz (una sola vez por elemento)
           var AC = root.AudioContext || root.webkitAudioContext;
           if (AC) {
             if (!video.__dest) { var ac0 = new AC(); video.__dest = ac0.createMediaStreamDestination(); ac0.createMediaElementSource(video).connect(video.__dest); video.__ac = ac0; }
@@ -460,9 +497,9 @@
             video.__dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
           }
         } catch (e) {}
+        function pauseAll() { vids.forEach(function (v) { try { v.pause(); v.loop = false; } catch (e) {} }); }
         function finish(err) {
-          if (done) return; done = true; cancelAnimationFrame(raf);
-          try { video.pause(); } catch (e) {}
+          if (done) return; done = true; cancelAnimationFrame(raf); pauseAll();
           if (err) reject(err);
         }
         try { rec = new root.MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4000000 }); } catch (e) { return reject(e); }
@@ -474,19 +511,7 @@
           resolve({ blob: new Blob(chunks, { type: m }), mime: m, ext: m.indexOf('mp4') >= 0 ? 'mp4' : 'webm' });
         };
         function frame() {
-          ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-          if (front) {
-            ctx.drawImage(ov, 0, 0, W, H);
-            var R = ov.__rect;
-            if (R && video.videoWidth) {
-              var sx = W / ov.width, sy = H / ov.height;
-              ctx.save(); rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.clip(); ctx.drawImage(video, R.x * sx, R.y * sy, R.w * sx, R.h * sy); ctx.restore();
-              ctx.lineWidth = 3 * sx; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.stroke();
-            }
-          } else {
-            if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
-            ctx.drawImage(ov, 0, 0, W, H);
-          }
+          drawScene(ctx, sc, { scale: scale });
           if (opts.onProgress) opts.onProgress(Math.max(0, Math.min(1, (video.currentTime - t0) / dur)));
           if (video.ended || video.currentTime >= end - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
           raf = root.requestAnimationFrame(frame);
@@ -494,11 +519,12 @@
         function go() {
           rec.start(500);
           var pl = video.play();
+          vids.forEach(function (v) { if (v !== video) { try { v.play(); } catch (e) {} } });
           function begin() { raf = root.requestAnimationFrame(frame); }
           if (pl && pl.then) pl.then(begin, function () { video.muted = true; video.play().then(begin, function (e) { finish(e); try { rec.stop(); } catch (x) {} }); });
           else begin();
         }
-        video.muted = false; video.currentTime = t0;
+        vids.forEach(function (v) { v.loop = v !== video; v.muted = v !== video; try { v.currentTime = v === video ? t0 : (v.duration ? t0 % v.duration : 0); } catch (e) {} });
         var started = false; function once() { if (started) return; started = true; video.removeEventListener('seeked', once); go(); }
         video.addEventListener('seeked', once); setTimeout(once, 600);
       });
@@ -506,14 +532,14 @@
   }
   /* Instagram admite hasta 60 s por historia: un vídeo más largo se graba en partes de 60 s, una detrás de otra. → Promise<[{blob,mime,ext}]> */
   var PART_SEC = 60;
-  function partsOf(video) { return Math.max(1, Math.ceil(((video.duration || PART_SEC) - 0.05) / PART_SEC)); }
-  function recordVideoParts(o, video, opts) {
+  function partsOf(video) { return Math.max(1, Math.ceil(((video && video.duration || PART_SEC) - 0.05) / PART_SEC)); }
+  function recordVideoParts(sc, opts) {
     opts = opts || {};
-    var n = partsOf(video), out = [], i = 0;
+    var n = partsOf(masterVideo(sc)), out = [], i = 0;
     function next() {
       if (i >= n) return Promise.resolve(out);
       var idx = i++;
-      return recordVideo(o, video, { start: idx * PART_SEC, maxSec: PART_SEC, role: opts.role, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
+      return recordVideo(sc, { start: idx * PART_SEC, maxSec: PART_SEC, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
         .then(function (v) { out.push(v); return next(); });
     }
     return next();
@@ -549,5 +575,5 @@
     return saveVideo(vs);
   }
 
-  root.Share = { LAYOUT_SLOTS: LAYOUT_SLOTS, FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, recordVideoParts: recordVideoParts, partsOf: partsOf, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
+  root.Share = { FORMATS: FORMATS, TEMPLATES: TEMPLATES, STYLES: STYLES, TYPE_LABEL: TYPE_LABEL, makeScene: makeScene, newElement: newElement, mediaOf: mediaOf, render: render, renderThumb: renderThumb, drawScene: drawScene, hitTest: hitTest, handleHit: handleHit, resizeBy: resizeBy, share: share, save: save, recordVideo: recordVideo, recordVideoParts: recordVideoParts, masterVideo: masterVideo, videosOf: videosOf, partsOf: partsOf, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
 })(typeof window !== 'undefined' ? window : globalThis);

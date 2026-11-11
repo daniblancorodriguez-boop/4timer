@@ -5,7 +5,7 @@ def b64(p): return base64.b64encode(open(w+p,'rb').read()).decode()
 css=open(w+'css/app.css',encoding='utf8').read()
 css=re.sub(r"url\('\.\./fonts/([^']+)'\)", lambda m: "url('data:font/woff2;base64,%s')" % b64('fonts/'+m.group(1)), css)
 js=''
-for f in ['timer','exercises','store','audio','led','map','share','run','runui','app']:
+for f in ['timer','exercises','store','audio','led','map','share','shareui','run','runui','app']:
     s=open(w+'js/%s.js'%f,encoding='utf8').read()
     assert '</script' not in s
     js+='/* ---- %s.js ---- */\n%s\n'%(f,s)

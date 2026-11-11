@@ -397,6 +397,23 @@ svg { overflow: visible; }
 .vbar { height: 12px; border-radius: 6px; background: var(--panel-2); overflow: hidden; }
 .vbar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .2s linear; }
 
+/* ---------- Editor de compartir ---------- */
+.tpl-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; margin: 0 -2px 8px; -webkit-overflow-scrolling: touch; }
+.tpl { flex: 0 0 auto; scroll-snap-align: center; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 6px 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+.tpl canvas { display: block; width: 84px; height: auto; border-radius: 6px; background: #050506; }
+.tpl.on { border-color: var(--orange); color: var(--chalk); }
+.ed-prev canvas { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; max-height: 64dvh; }
+.ed-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.ed-bar[hidden], .ed-bar [hidden] { display: none; }
+.ed-sel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 22px; }
+.ed-x { color: var(--muted); cursor: pointer; font-size: 19px; padding: 6px 4px; }
+.ed-ops { display: flex; flex-wrap: wrap; gap: 8px; }
+.ed-ops .btn { flex: 1 1 30%; min-width: 0; }
+.ed-bar .seg-ctl .btn.on { background: var(--orange); color: #1b1203; border-color: var(--orange); }
+.ed-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ed-add-l { color: var(--muted); font-size: 19px; flex: 1 0 100%; }
+.ed-add .btn { flex: 0 1 auto; }
+
 </style>
 </head>
 <body>
@@ -1419,8 +1436,7 @@ svg { overflow: visible; }
   'use strict';
   var FORMATS = {
     story: { w: 1080, h: 1920, label: 'Story' },
-    post: { w: 1080, h: 1350, label: 'Post' },
-    land: { w: 1920, h: 1080, label: 'Horizontal' }
+    post: { w: 1080, h: 1350, label: 'Publicación' }
   };
   var F = '"Barlow Condensed", "Arial Narrow", sans-serif';
   var RED = '#ff2d2d', BLUE = '#3a74ff', ORANGE = '#f5921e', MUTED = '#a3a3aa';
@@ -1489,10 +1505,10 @@ svg { overflow: visible; }
   }
 
   /* Marcador: recuadro oscuro con etiqueta y LED (rondas/tiempo) o texto grande (EMOM, otros). */
-  function drawStat(ctx, r, x, y, w, u, digitsH) {
+  function drawStat(ctx, r, x, y, w, u, digitsH, mode) {
     var h = 56 + digitsH + 44;
-    ctx.save(); rr(ctx, x, y, w, h, 30); ctx.fillStyle = 'rgba(0,0,0,.74)'; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(); ctx.restore();
+    if (mode !== 2) { ctx.save(); rr(ctx, x, y, w, h, 30); ctx.fillStyle = mode === 1 ? 'rgba(10,10,14,.42)' : 'rgba(0,0,0,.74)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(); ctx.restore(); }
     ctx.font = '700 40px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.label, x + 34, y + 54);
     if (r.kind === 'text') {
       ctx.textAlign = 'center'; ctx.fillStyle = RED; ctx.shadowColor = RED; ctx.shadowBlur = 18;
@@ -1520,92 +1536,15 @@ svg { overflow: visible; }
     return w;
   }
 
-  /* ---------- Estilos con varias fotos (solo Story): carrete + fondo, 2 fondos, collage ----------
-     o.layout: 'std' | 'strip3' | 'strip4' | 'collage'  ·  o.imgs: fotos por hueco  ·  o.placeholders: dibuja los huecos vacíos (solo en la vista previa) */
-  var LAYOUT_SLOTS = {
-    strip3: ['Fondo', 'Carrete 1', 'Carrete 2', 'Carrete 3'],
-    strip4: ['Fondo arriba', 'Fondo abajo', 'Carrete 1', 'Carrete 2', 'Carrete 3', 'Carrete 4'],
-    collage: ['Fondo', 'Foto 1', 'Foto 2', 'Foto 3']
-  };
-  function layOf(o, W, H) { return (o.layout && LAYOUT_SLOTS[o.layout] && W < H && H > 1500) ? o.layout : null; }
-  function placeholder(ctx, x, y, w, h, label, r) {
+  function placeholder(ctx, x, y, w, h, label, r, cyf) {
     ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.fillStyle = '#2b2b30'; ctx.fill();
     ctx.setLineDash([14, 12]); ctx.lineWidth = 3; ctx.strokeStyle = '#5b5b63'; ctx.stroke(); ctx.setLineDash([]);
-    var cx = x + w / 2, cy = y + h / 2, rad = Math.max(18, Math.min(46, Math.min(w, h) * 0.16));
+    var cx = x + w / 2, cy = y + h * (cyf || 0.5), rad = Math.max(18, Math.min(46, Math.min(w, h) * 0.16));
     ctx.fillStyle = '#5a5a5f'; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 7); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(3, rad / 6); ctx.beginPath(); ctx.moveTo(cx - rad * .45, cy); ctx.lineTo(cx + rad * .45, cy); ctx.moveTo(cx, cy - rad * .45); ctx.lineTo(cx, cy + rad * .45); ctx.stroke();
     ctx.fillStyle = '#9b9ba3'; ctx.font = '700 ' + Math.max(22, Math.min(34, Math.round(h * 0.12))) + 'px ' + F; ctx.textAlign = 'center'; ctx.fillText(label, cx, cy + rad + 40); ctx.textAlign = 'left';
     ctx.restore();
   }
-  function slot(ctx, o, img, x, y, w, h, label, r) {
-    if (img) { ctx.save(); rr(ctx, x, y, w, h, r || 0); ctx.clip(); cover(ctx, img, x, y, w, h); ctx.restore(); }
-    else if (o.placeholders) placeholder(ctx, x, y, w, h, label, r);
-  }
-  function artLayout(ctx, o, lay, x0, top, cw, bottom) {
-    var im = o.imgs || [], R = bottom - top, i, k;
-    if (lay === 'strip3') {                                   // tira de fotomatón, a la derecha y ligeramente girada
-      var gp = 16, pg = 24, fh = Math.floor((R - 2 * pg - 2 * gp - 40) / 3), fw = Math.round(fh * 1.4), sw = fw + 2 * pg, sh = 3 * fh + 2 * gp + 2 * pg + 40;
-      ctx.save(); ctx.translate(x0 + cw - sw / 2 - 8, top + R / 2); ctx.rotate(0.05);
-      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 12; ctx.fillStyle = '#efeee9'; rr(ctx, -sw / 2, -sh / 2, sw, sh, 8); ctx.fill(); ctx.shadowColor = 'transparent';
-      for (i = 0; i < 3; i++) slot(ctx, o, im[1 + i], -fw / 2, -sh / 2 + pg + i * (fh + gp), fw, fh, 'Carrete ' + (i + 1), 2);
-      ctx.fillStyle = '#6a6a66'; ctx.font = '700 italic 26px ' + F; ctx.textAlign = 'center'; ctx.fillText('4TIME · 4TIMER', 0, sh / 2 - 16); ctx.textAlign = 'left';
-      ctx.restore();
-    } else if (lay === 'strip4') {                            // carrete de película inclinado, a la izquierda
-      var gp4 = 14, pg4 = 30, sh4 = R + 40, fh4 = Math.floor((sh4 - 3 * gp4 - 2 * pg4) / 4), fw4 = Math.round(fh4 * 1.2), sw4 = fw4 + 2 * 38;
-      ctx.save(); ctx.translate(x0 + sw4 / 2 + 6, top + R / 2 - 10); ctx.rotate(-0.15);
-      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 10; ctx.fillStyle = '#0b0b0c'; ctx.fillRect(-sw4 / 2, -sh4 / 2, sw4, sh4); ctx.shadowColor = 'transparent';
-      ctx.fillStyle = 'rgba(230,229,222,.9)';
-      for (k = -sh4 / 2 + 14; k < sh4 / 2 - 22; k += 40) { rr(ctx, -sw4 / 2 + 9, k, 20, 24, 5); ctx.fill(); rr(ctx, sw4 / 2 - 29, k, 20, 24, 5); ctx.fill(); }
-      for (i = 0; i < 4; i++) slot(ctx, o, im[2 + i], -fw4 / 2, -sh4 / 2 + pg4 + i * (fh4 + gp4), fw4, fh4, 'Carrete ' + (i + 1), 3);
-      ctx.restore();
-    } else if (lay === 'collage') {                           // tres fotos principales solapadas sobre la de fondo
-      var ph = Math.round(R * 0.54), pw = Math.round(ph * 0.75), bw = 9;
-      var card = function (x, y, a, img, label, white) {
-        ctx.save(); ctx.translate(x + pw / 2, y + ph / 2); ctx.rotate(a);
-        ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8; ctx.fillStyle = white ? '#f4f3ee' : '#111'; ctx.fillRect(-pw / 2 - bw, -ph / 2 - bw, pw + 2 * bw, ph + 2 * bw); ctx.shadowColor = 'transparent';
-        slot(ctx, o, img, -pw / 2, -ph / 2, pw, ph, label, 0); ctx.restore();
-      };
-      card(x0 + cw - pw - 6, top + 4, 0.025, im[1], 'Foto 1', false);
-      card(x0 + cw * 0.34 - pw / 2 + 40, top + R * 0.30, -0.02, im[2], 'Foto 2', true);
-      card(x0 + cw - pw - 30, top + R - ph - 4, 0.02, im[3], 'Foto 3', false);
-    }
-  }
-
-  function background(ctx, o, W, H) {
-    var lay = layOf(o, W, H);
-    if (lay) {
-      ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-      var im0 = (o.imgs || [])[0], im1 = (o.imgs || [])[1];
-      if (lay === 'strip4') { slot(ctx, o, im0, 0, 0, W, H / 2, 'Fondo arriba', 0); slot(ctx, o, im1, 0, H / 2, W, H / 2, 'Fondo abajo', 0); }
-      else slot(ctx, o, im0, 0, 0, W, H, 'Fondo', 0);
-      var tp = ctx.createLinearGradient(0, 0, 0, 360); tp.addColorStop(0, 'rgba(0,0,0,.65)'); tp.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tp; ctx.fillRect(0, 0, W, 360);
-      var bt = ctx.createLinearGradient(0, H * 0.45, 0, H); bt.addColorStop(0, 'rgba(0,0,0,0)'); bt.addColorStop(0.5, 'rgba(0,0,0,.78)'); bt.addColorStop(1, 'rgba(0,0,0,.94)'); ctx.fillStyle = bt; ctx.fillRect(0, H * 0.45, W, H * 0.55);
-      return;
-    }
-    if (!o.overlay) { ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H); }
-    if (o.photo || o.overlay) {
-      if (!o.overlay) cover(ctx, o.photo, 0, 0, W, H);
-      var top = ctx.createLinearGradient(0, 0, 0, 360); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = top; ctx.fillRect(0, 0, W, 360);
-      var bot = ctx.createLinearGradient(0, H * 0.3, 0, H); bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(0.55, 'rgba(0,0,0,.78)'); bot.addColorStop(1, 'rgba(0,0,0,.93)');
-      ctx.fillStyle = bot; ctx.fillRect(0, H * 0.3, W, H * 0.7);
-    } else {
-      var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9);
-      g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9);
-      g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)');
-      ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
-    }
-  }
-  function drawBoard(ctx, img, x, y, w, h, o) {
-    var bs = imgSize(img), bk = Math.min(w / bs.w, h / bs.h), bw = bs.w * bk, bh = bs.h * bk, bx = x + (w - bw) / 2, by = y + (h - bh) / 2;
-    if (o) o.__boardRect = { x: bx, y: by, w: bw, h: bh };
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 30; ctx.fillStyle = '#000'; rr(ctx, bx, by, bw, bh, 26); ctx.fill(); ctx.restore();
-    ctx.save(); rr(ctx, bx, by, bw, bh, 26); ctx.clip(); ctx.drawImage(img, bx, by, bw, bh); ctx.restore();
-    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, bx, by, bw, bh, 26); ctx.stroke();
-  }
-
   /* Recorrido dibujado sin mapa (privacidad): línea neón normalizada al recuadro */
   function drawRoute(ctx, route, x, y, w, h, map) {
     ctx.save(); rr(ctx, x, y, w, h, 26); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill();
@@ -1633,150 +1572,266 @@ svg { overflow: visible; }
     ctx.restore();
   }
 
-  /* o: { format:'story'|'post'|'land', style:'std'|'logo', photo, board, logo, gymName, showExercises,
-          r: {modeName, name, kind:'rounds'|'time'|'text', value, sub, label, pr, lines:[{num, parts:[{qty,name}], note}], date} } */
-  function render(canvas, o) {
-    return fontsReady().then(function () {
-      var r0 = o.r, wantMap = r0.kind === 'run' && o.map && r0.route && r0.route.length > 1 && !o.board && root.RunMap;
-      if (!wantMap) return doRender(canvas, o, null);
-      var probe = {}; doRender(root.document.createElement('canvas'), o, null, probe);       // 1.ª pasada: solo mide el hueco del recorrido
-      if (!probe.w) return doRender(canvas, o, null);
-      return root.RunMap.render(r0.route, probe.w, probe.h).then(function (m) { return doRender(canvas, o, m.loaded ? m : null); });
-    });
+  /* ---------- Escena editable: la tarjeta es una lista de elementos (de atrás hacia delante) ----------
+     elemento: { id, type, x, y, w, h (fracciones del lienzo, esquina sup. izq.), rot (rad), style (0..2), media:{el,kind,url}|null, fixed (fondo fijo) }
+     tipos: media · title · stat · exercises · logo · brand · footer · route */
+  var seqId = 0;
+  var TYPE_LABEL = { media: 'Foto / vídeo', title: 'Cartel del entreno', stat: 'Marcador', exercises: 'Ejercicios', logo: 'Logo', brand: '4TIMER', footer: 'Fecha y pie', route: 'Recorrido' };
+  var STYLES = { media: ['Recto', 'Redondeado', 'Polaroid'], title: ['Cartel', 'Cristal', 'Solo texto'], stat: ['Marcador', 'Cristal', 'Solo cifras'], exercises: ['Texto', 'Cristal', 'Oscuro'], route: ['Línea', 'Mapa real'] };
+  function mk(type, px, extra) {                                  // px = [x, y, w, h] sobre un lienzo Story de 1080×1920
+    var e = { id: 'e' + (++seqId), type: type, x: px[0] / 1080, y: px[1] / 1920, w: px[2] / 1080, h: px[3] / 1920, rot: 0, style: 0, media: null, fixed: false };
+    for (var k in extra) e[k] = extra[k];
+    return e;
   }
-  function doRender(canvas, o, mapPre, probe) {
-    {
-      var fmtDef = FORMATS[o.format] || FORMATS.story, W = fmtDef.w, H = fmtDef.h, land = W > H, pad = 64, cw = W - pad * 2;
-      var big = o.style === 'logo';
-      canvas.width = W; canvas.height = H;
-      var ctx = canvas.getContext('2d'), r = o.r;
-      ctx.textBaseline = 'alphabetic';
-      background(ctx, o, W, H);
+  function bg(rect, label) { return mk('media', rect || [0, 0, 1080, 1920], { fixed: true, label: label || 'Fondo' }); }
+  function std(run, o) {                                          // logo + marca arriba, bloque de resultado abajo
+    o = o || {};
+    var L = [mk('logo', [64, 64, 160, 160]), mk('brand', [600, 64, 416, 112])];
+    if (run && o.route) L.push(mk('route', o.route));
+    return L;
+  }
+  function bottom(o) {
+    o = o || {}; var L = [];
+    L.push(mk('title', [64, o.ty || 1140, 952, 196]));
+    L.push(mk('stat', [64, o.sy || 1350, 952, 414]));
+    L.push(mk('footer', [64, 1790, 952, 66]));
+    return L;
+  }
+  var TEMPLATES = [
+    { id: 'clasica', name: 'Clásica', make: function (run) {
+      var L = [bg()].concat(std(run, { route: [64, 250, 952, 460] }));
+      L.push(mk('title', [64, 760, 952, 190]), mk('stat', [64, 960, 952, 414]), mk('exercises', [64, 1400, 952, 360]), mk('footer', [64, 1790, 952, 66]));
+      return L; } },
+    { id: 'pizarra', name: 'Foto frontal', make: function () {
+      var L = [bg()].concat(std(false));
+      L.push(mk('media', [64, 250, 952, 480], { style: 1, label: 'Foto frontal' }), mk('title', [64, 760, 952, 190]), mk('stat', [64, 960, 952, 414]), mk('exercises', [64, 1400, 952, 360]), mk('footer', [64, 1790, 952, 66]));
+      return L; } },
+    { id: 'arriba', name: 'Ejercicios arriba', make: function (run) {
+      var L = [bg()].concat(std(run, { route: [64, 720, 952, 400] }));
+      L.push(mk('exercises', [64, 260, 790, 420], { style: 1 }));
+      return L.concat(bottom()); } },
+    { id: 'limpia', name: 'Solo resultado', make: function (run) {
+      return [bg()].concat(std(run, { route: [64, 250, 952, 460] }), bottom()); } },
+    { id: 'carrete3', name: 'Carrete 3 + fondo', make: function () {
+      var L = [bg()].concat(std(false));
+      for (var i = 0; i < 3; i++) L.push(mk('media', [680, 280 + i * 290, 340, 255], { style: 2, rot: 0.05, label: 'Carrete ' + (i + 1) }));
+      return L.concat(bottom()); } },
+    { id: 'carrete4', name: 'Carrete 4 + 2 fondos', make: function () {
+      var L = [bg([0, 0, 1080, 960], 'Fondo arriba'), bg([0, 960, 1080, 960], 'Fondo abajo')].concat(std(false));
+      for (var i = 0; i < 4; i++) L.push(mk('media', [70, 270 + i * 215, 290, 190], { style: 2, rot: -0.12, label: 'Carrete ' + (i + 1) }));
+      return L.concat(bottom()); } },
+    { id: 'collage', name: 'Collage 3 + fondo', make: function () {
+      var L = [bg()].concat(std(false));
+      L.push(mk('media', [640, 250, 380, 490], { style: 2, rot: 0.03, label: 'Foto 1' }), mk('media', [290, 520, 380, 490], { style: 2, rot: -0.03, label: 'Foto 2' }), mk('media', [620, 760, 380, 360], { style: 2, rot: 0.02, label: 'Foto 3' }));
+      return L.concat(bottom()); } }
+  ];
+  /* Escena nueva: plantilla + datos. pool: medios ya cargados que se reparten por los huecos libres (en orden) */
+  function makeScene(tplIdx, format, data) {
+    var t = TEMPLATES[tplIdx] || TEMPLATES[0], sc = { tpl: tplIdx, format: format === 'post' ? 'post' : 'story', r: data.r, logo: data.logo || null, gymName: data.gymName || '', elements: t.make(!!data.isRun) };
+    var pool = (data.pool || []).slice();
+    sc.elements.forEach(function (e) { if (e.type === 'media' && !e.media && pool.length) e.media = pool.shift(); });
+    sc.spare = pool;
+    return sc;
+  }
+  function mediaOf(sc) { return sc.elements.filter(function (e) { return e.type === 'media' && e.media; }).map(function (e) { return e.media; }); }
+  function newElement(type, sc) {
+    var e = mk(type, { media: [260, 700, 560, 560], title: [64, 800, 952, 190], stat: [64, 700, 952, 414], exercises: [64, 700, 952, 360], logo: [64, 64, 160, 160], brand: [600, 64, 416, 112], footer: [64, 1790, 952, 66], route: [64, 600, 952, 460] }[type]);
+    return e;
+  }
 
-      // ----- fila superior: logo del gimnasio (izq.) y marca 4TIMER (dcha.) -----
-      var round = !!(o.logo && o.logo.__round);                      // logo circular de serie: sin fondo ni recorte rectangular
-      var logoH = (big ? (land ? 220 : 300) : (land ? 112 : 132)) * (round ? 1.18 : 1), logoMaxW = big ? (land ? 620 : 600) : 400, wm = big ? 66 : (land ? 80 : 92);
-      if (o.logo) {
-        var ls = imgSize(o.logo), k = Math.min(logoMaxW / ls.w, logoH / ls.h), lw = ls.w * k, lh = ls.h * k;
-        if (round) ctx.drawImage(o.logo, pad, pad, lw, lh);
-        else { ctx.save(); rr(ctx, pad, pad, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(pad, pad, lw, lh);
-        ctx.drawImage(o.logo, pad, pad, lw, lh); ctx.restore(); }
-      } else if (o.gymName) {
-        ctx.font = '800 italic ' + (big ? 96 : 64) + 'px ' + F; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(o.gymName, pad, pad + (big ? 110 : 70));
-      }
-      var wmY = big ? pad + logoH / 2 + wm * 0.36 : pad + 96 * wm / 92;
-      ctx.textAlign = 'right'; ctx.font = '800 italic ' + wm + 'px ' + F;
-      var tw = ctx.measureText('TIMER').width; ctx.fillStyle = '#fff'; ctx.fillText('TIMER', W - pad, wmY);
-      ctx.lineWidth = Math.max(3, wm / 23); ctx.strokeStyle = ORANGE; ctx.lineJoin = 'round';
-      ctx.strokeText('4', W - pad - tw - 4, wmY);
-      ctx.textAlign = 'left';
-      var topLimit = pad + logoH + 40;
-
-      var routeBoard = r.kind === 'run' && r.route && r.route.length > 1 && !o.board, hasBoard = !!(o.board || routeBoard);
-      function drawB(x, y, w, h) { if (routeBoard) { if (probe) { probe.w = Math.round(w); probe.h = Math.round(h); } drawRoute(ctx, r.route, x, y, w, h, mapPre); } else drawBoard(ctx, o.board, x, y, w, h, o); }
-      var exAll = (o.showExercises && r.lines) ? r.lines : [];
-      var chipH = 60, gap = 26, lineH = 62, footY = H - pad;
-      var showT = !o.hideTitle, showS = !o.hideStat;        // se pueden quitar el cartel del modo/nombre y el marcador
-
-      function footer() {
-        ctx.font = '600 38px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.date, pad, footY);
-        ctx.textAlign = 'right'; ctx.fillText('Hecho con 4TIMER', W - pad, footY); ctx.textAlign = 'left';
-      }
-      function chip(y) {
-        ctx.font = '800 italic 38px ' + F;
-        var chipW = ctx.measureText(r.modeName).width + 44;
-        ctx.fillStyle = ORANGE; rr(ctx, pad, y, chipW, chipH, chipH / 2); ctx.fill();
-        ctx.fillStyle = '#1b1203'; ctx.fillText(r.modeName, pad + 22, y + 42);
-        if (r.pr) drawPR(ctx, pad + chipW + 16, y, chipH);
-      }
-
-      // ================= HORIZONTAL 16:9 =================
-      if (land) {
-        var colW = 880, rx = pad + colW + 70, rw = W - pad - rx;
-        var y0 = topLimit - 10;
-        if (showT) chip(y0);
-        var ty = y0 + (showT ? chipH + gap / 2 : 0), tf = '800 italic 88px ' + F;
-        ctx.font = tf; ctx.fillStyle = '#fff';
-        var tl = showT ? wrap(ctx, r.name, colW, 2) : [];
-        tl.forEach(function (t, i) { ctx.fillText(t, pad, ty + 78 + i * 90); });
-        var ly = ty + tl.length * 90 + 24, lroom = footY - 70 - ly;
-        if (hasBoard && lroom > 160) drawB(pad, ly, colW, lroom);
-        else {
-          var maxE = Math.max(0, Math.min(9, Math.floor(lroom / lineH))), sh = exAll.slice(0, maxE), mo = exAll.length - sh.length;
-          if (mo > 0 && sh.length > 1) { sh = sh.slice(0, sh.length - 1); mo = exAll.length - sh.length; } else if (mo > 0) { sh = []; mo = 0; }
-          sh.forEach(function (ln, i) { drawExercise(ctx, ln, pad, ly + 44 + i * lineH, colW); });
-          if (mo > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + mo + ' más', pad, ly + 44 + sh.length * lineH); }
-        }
-        // marcador a la derecha, centrado en vertical
-        var probe = r.kind === 'rounds' ? '00' : r.kind === 'run' ? '00.00' : '00:00', uu = Math.min(3.6, (rw - 76) / root.LED.measure(probe, 1)), dH = 96 * uu, stH = 56 + dH + 44;
-        var areaTop = topLimit - 10, areaH = footY - 70 - areaTop, sy = areaTop + Math.max(0, (areaH - stH - 70) / 2);
-        if (showS) {
-          drawStat(ctx, r, rx, sy, rw, uu, dH);
-          ctx.font = '700 46px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-          ctx.fillText(r.sub || '', rx + rw / 2, sy + stH + 56); ctx.textAlign = 'left';
-        }
-        footer();
-        return canvas;
-      }
-
-      // ================= VERTICAL (story / post) =================
-      var lay = layOf(o, W, H);
-      if (lay) { exAll = []; hasBoard = false; }          // estilos con fotos: solo marcador, sin lista ni pizarra
-      var exTop = !!o.exTop && exAll.length > 0;      // ejercicios arriba a la izquierda (semitransparentes); el marcador baja al fondo
-      var u = ((hasBoard && H < 1500) || lay) ? 1.9 : 2.6, digitsH = 96 * u, statH = 56 + digitsH + 44, subH = 64, footerH = 70;
-      var titleFont = '800 italic 98px ' + F;
-      ctx.font = titleFont;
-      var titleLines = wrap(ctx, r.name, cw, 2), titleH = titleLines.length * 100 + 14;
-      var fixed = footerH + (showS ? subH + statH : 0) + (showT ? titleH + chipH + gap : 0) + gap + gap;
-      var room = H - pad - topLimit - fixed - gap;
-      var boardMin = hasBoard ? (H > 1500 ? 560 : 400) : 0;
-      var maxEx = Math.max(0, Math.min(9, Math.floor((room - boardMin) / lineH)));
-      if (exTop) maxEx = 0;
-      var shown = exAll.slice(0, maxEx), more = exAll.length - shown.length;
-      if (more > 0 && shown.length) { shown = shown.slice(0, shown.length - 1); more = exAll.length - shown.length; }
-      if (!shown.length || (hasBoard && more > 0 && shown.length < 2)) { shown = []; more = 0; }   // sin hueco: mejor no mostrar una lista a medias
-      var exH = shown.length ? shown.length * lineH + (more > 0 ? lineH : 0) + gap : 0;
-      var y = H - pad - (fixed + exH);
-
-      var tyTop = topLimit + 6, tShown = [], tMore = 0, pw = 0, ph = 0;
-      if (exTop) {
-        var tLines = Math.max(1, Math.min(9, Math.floor((y - 30 - tyTop - 24) / lineH)));
-        tShown = exAll.slice(0, tLines); tMore = exAll.length - tShown.length;
-        if (tMore > 0 && tShown.length > 1) { tShown = tShown.slice(0, tShown.length - 1); tMore = exAll.length - tShown.length; }
-        pw = Math.round(cw * 0.74); ph = tShown.length * lineH + (tMore > 0 ? lineH : 0) + 34;
-      }
-      if (hasBoard) {
-        var bTop = topLimit;
-        if (exTop && y - 30 - (tyTop + ph + 20) >= 420) bTop = tyTop + ph + 20;       // la pizarra va debajo de la lista si cabe
-        var bh2 = y - 30 - bTop; if (bh2 > 160) drawB(pad, bTop, cw, bh2);
-      }
-      if (exTop) {
-        ctx.save(); rr(ctx, pad - 22, tyTop, pw + 22, ph, 26); ctx.fillStyle = 'rgba(0,0,0,.46)'; ctx.fill(); ctx.restore();
-        ctx.save(); ctx.globalAlpha = 0.93;
-        tShown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, tyTop + 50 + i * lineH, pw - 30); });
-        if (tMore > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + tMore + ' más', pad, tyTop + 50 + tShown.length * lineH); }
-        ctx.restore();
-      }
-
-      if (lay) artLayout(ctx, o, lay, pad, topLimit, cw, y - 28);
-      if (showT) {
-        chip(y); y += chipH + gap / 2;
-        ctx.font = titleFont; ctx.fillStyle = '#fff';
-        titleLines.forEach(function (t, i) { ctx.fillText(t, pad, y + 88 + i * 100); });
-        y += titleH + gap / 2;
-      }
-      if (showS) {
-        drawStat(ctx, r, pad, y, cw, u, digitsH);
-        y += statH + 14;
-        ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center';
-        ctx.fillText(r.sub || '', W / 2, y + 40); ctx.textAlign = 'left';
-        y += subH - 14 + gap / 2;
-      }
-      shown.forEach(function (ln, i) { drawExercise(ctx, ln, pad, y + 44 + i * lineH, cw); });
-      if (more > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + more + ' más', pad, y + 44 + shown.length * lineH); }
-      footer();
-      return canvas;
+  function mediaDims(m) { var el = m.el; return { w: el.naturalWidth || el.videoWidth || el.width, h: el.naturalHeight || el.videoHeight || el.height }; }
+  function drawMediaFill(ctx, m, x, y, w, h) { try { cover(ctx, m.el, x, y, w, h); } catch (e) {} }
+  function scrim(ctx, w, h, part) {                                // oscurece arriba y/o abajo para que se lea el texto sobre la foto
+    if (part === 'bottom') { var bb = ctx.createLinearGradient(0, h * 0.4, 0, h); bb.addColorStop(0, 'rgba(0,0,0,0)'); bb.addColorStop(1, 'rgba(0,0,0,.85)'); ctx.fillStyle = bb; ctx.fillRect(0, h * 0.4, w, h * 0.6); return; }
+    var th = Math.min(360, h * 0.2), top = ctx.createLinearGradient(0, 0, 0, th); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = top; ctx.fillRect(0, 0, w, th);
+    if (part === 'top') return;
+    var bot = ctx.createLinearGradient(0, h * 0.3, 0, h); bot.addColorStop(0, 'rgba(0,0,0,0)'); bot.addColorStop(0.55, 'rgba(0,0,0,.78)'); bot.addColorStop(1, 'rgba(0,0,0,.93)');
+    ctx.fillStyle = bot; ctx.fillRect(0, h * 0.3, w, h * 0.7);
+  }
+  function drawMedia(ctx, e, w, h, o) {
+    var m = e.media, st = e.style | 0;
+    if (!m) {
+      if (!o.placeholders) return;
+      if (o.ghost) { ctx.fillStyle = '#2b2b30'; ctx.fillRect(0, 0, w, h); return; }
+      placeholder(ctx, 0, 0, w, h, e.label || 'Foto o vídeo', st === 1 ? 26 : 0, e.fixed && e.h > 0.9 ? 0.2 : 0.5); return;
     }
+    if (st === 2) {                                                // polaroid
+      var pd = Math.max(8, Math.min(w, h) * 0.045);
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8; ctx.fillStyle = '#f4f3ee'; ctx.fillRect(0, 0, w, h); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(pd, pd, w - 2 * pd, h - 2 * pd); ctx.clip(); drawMediaFill(ctx, m, pd, pd, w - 2 * pd, h - 2 * pd); ctx.restore();
+    } else if (st === 1) {                                         // redondeado con sombra y borde fino
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 30; ctx.fillStyle = '#000'; rr(ctx, 0, 0, w, h, 26); ctx.fill(); ctx.restore();
+      ctx.save(); rr(ctx, 0, 0, w, h, 26); ctx.clip(); drawMediaFill(ctx, m, 0, 0, w, h); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, 0, 0, w, h, 26); ctx.stroke();
+    } else {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip(); drawMediaFill(ctx, m, 0, 0, w, h);
+      if (e.fixed) scrim(ctx, w, h, e.h > 0.9 ? '' : e.y < 0.01 ? 'top' : 'bottom');   // fondo: sombreado para leer el texto
+      ctx.restore();
+    }
+  }
+  function chipAt(ctx, r, x, y, s) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.font = '800 italic 38px ' + F;
+    var cwid = ctx.measureText(r.modeName).width + 44;
+    ctx.fillStyle = ORANGE; rr(ctx, 0, 0, cwid, 60, 30); ctx.fill();
+    ctx.fillStyle = '#1b1203'; ctx.fillText(r.modeName, 22, 42);
+    if (r.pr) drawPR(ctx, cwid + 16, 0, 60);
+    ctx.restore();
+  }
+  function drawTitle(ctx, r, w, h, st) {
+    var box = st === 1, pad = box ? Math.min(26, h * 0.12) : 0, iw = w - 2 * pad, ih = h - 2 * pad, chip = st !== 2, name = String(r.name || '').replace(/\s+/g, ' ').trim() || r.modeName;
+    if (box) { ctx.save(); rr(ctx, 0, 0, w, h, 26); ctx.fillStyle = 'rgba(0,0,0,.52)'; ctx.fill(); ctx.restore(); }
+    var fs = Math.min(150, ih), lines = [name], chH;
+    for (; fs >= 22; fs -= 4) {
+      ctx.font = '800 italic ' + fs + 'px ' + F; lines = wrap(ctx, name, iw, 2);
+      chH = chip ? fs * 0.62 + fs * 0.16 : 0;
+      if (chH + lines.length * fs * 1.02 <= ih + 1 && lines.join(' ') === name) break;
+    }
+    chH = chip ? fs * 0.62 + fs * 0.16 : 0;
+    if (chip) chipAt(ctx, r, pad, pad, (fs * 0.62) / 60);
+    ctx.font = '800 italic ' + fs + 'px ' + F; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+    lines.forEach(function (t, i) { ctx.fillText(t, pad, pad + chH + fs * 0.84 + i * fs * 1.02); });
+  }
+  function statLedW(r) { var p = r.kind === 'rounds' ? '00' : r.kind === 'run' ? '00.00' : '00:00'; return root.LED.measure(p, 2.6); }
+  function drawStatEl(ctx, r, w, h, st) {
+    var REFH = 349.6 + 64, k = h / REFH;
+    if (r.kind !== 'text') k = Math.min(k, w / (statLedW(r) + 110));
+    var rw = w / k;
+    ctx.save(); ctx.scale(k, k);
+    drawStat(ctx, r, 0, 0, rw, 2.6, 96 * 2.6, st);
+    ctx.font = '700 44px ' + F; ctx.fillStyle = '#e9e9ec'; ctx.textAlign = 'center'; ctx.fillText(r.sub || '', rw / 2, 349.6 + 54); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  function drawExEl(ctx, r, w, h, st, o) {
+    var lines = r.lines || [], n = lines.length;
+    if (!n) { if (o.placeholders && !o.ghost) { ctx.save(); rr(ctx, 0, 0, w, h, 20); ctx.setLineDash([14, 12]); ctx.lineWidth = 3; ctx.strokeStyle = '#8a8a92'; ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#9b9ba3'; ctx.font = '700 36px ' + F; ctx.textAlign = 'center'; ctx.fillText('Ejercicios', w / 2, h / 2 + 12); ctx.restore(); } return; }
+    var pad = st ? 22 : 0, avail = h - 2 * pad, s = Math.min(1.25, avail / (n * 62)), cnt = n;
+    if (s < 0.5) { s = 0.5; cnt = Math.max(1, Math.floor(avail / (62 * s)) - 1); }
+    var shown = lines.slice(0, cnt), more = n - shown.length, ch = Math.min(h, (shown.length * 62 + (more > 0 ? 62 : 0)) * s + 2 * pad + (st ? 4 : 0));
+    if (st) { ctx.save(); rr(ctx, 0, 0, w, ch, 26); ctx.fillStyle = st === 1 ? 'rgba(0,0,0,.46)' : 'rgba(10,10,12,.88)'; ctx.fill(); ctx.restore(); }
+    ctx.save(); ctx.translate(pad, pad); ctx.scale(s, s); var iw = (w - 2 * pad) / s;
+    if (st === 1) ctx.globalAlpha = 0.95;
+    shown.forEach(function (ln, i) { drawExercise(ctx, ln, 0, 44 + i * 62, iw); });
+    if (more > 0) { ctx.font = 'italic 600 40px ' + F; ctx.fillStyle = MUTED; ctx.fillText('+ ' + more + ' más', 0, 44 + shown.length * 62); }
+    ctx.restore();
+  }
+  function drawLogoEl(ctx, sc, w, h) {
+    var lg = sc.logo;
+    if (lg) {
+      var ls = imgSize(lg), k = Math.min(w / ls.w, h / ls.h), lw = ls.w * k, lh = ls.h * k, lx = (w - lw) / 2, ly = (h - lh) / 2;
+      if (lg.__round) ctx.drawImage(lg, lx, ly, lw, lh);
+      else { ctx.save(); rr(ctx, lx, ly, lw, lh, 22); ctx.clip(); ctx.fillStyle = '#000'; ctx.fillRect(lx, ly, lw, lh); ctx.drawImage(lg, lx, ly, lw, lh); ctx.restore(); }
+    } else if (sc.gymName) {
+      var fs = Math.min(96, h * 0.7); ctx.font = '800 italic ' + fs + 'px ' + F;
+      while (fs > 20 && ctx.measureText(sc.gymName).width > w) { fs -= 4; ctx.font = '800 italic ' + fs + 'px ' + F; }
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(sc.gymName, 0, h * 0.7);
+    }
+  }
+  function drawBrandEl(ctx, w, h) {
+    var fs = Math.min(h / 1.2, 140); ctx.font = '800 italic ' + fs + 'px ' + F;
+    var tw = ctx.measureText('TIMER').width;
+    while (fs > 20 && tw + fs * 0.9 > w) { fs -= 4; ctx.font = '800 italic ' + fs + 'px ' + F; tw = ctx.measureText('TIMER').width; }
+    var by = Math.min(h, fs * 0.98);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.fillText('TIMER', w, by);
+    ctx.lineWidth = Math.max(3, fs / 23); ctx.strokeStyle = ORANGE; ctx.lineJoin = 'round'; ctx.strokeText('4', w - tw - fs * 0.04, by);
+    ctx.textAlign = 'left';
+  }
+  function drawFooterEl(ctx, r, w, h) {
+    var fs = Math.min(38, h * 0.62); ctx.font = '600 ' + fs + 'px ' + F; ctx.fillStyle = MUTED; ctx.textAlign = 'left'; ctx.fillText(r.date || '', 0, h * 0.72);
+    ctx.textAlign = 'right'; ctx.fillText('Hecho con 4TIMER', w, h * 0.72); ctx.textAlign = 'left';
+  }
+  function rectPx(e, W, H) { return { x: e.x * W, y: e.y * H, w: e.w * W, h: e.h * H }; }
+  function drawElement(ctx, sc, e, W, H, o) {
+    var R = rectPx(e, W, H), r = sc.r;
+    ctx.save(); ctx.translate(R.x + R.w / 2, R.y + R.h / 2); if (e.rot) ctx.rotate(e.rot); ctx.translate(-R.w / 2, -R.h / 2);
+    ctx.textBaseline = 'alphabetic';
+    if (e.type === 'media') drawMedia(ctx, e, R.w, R.h, o);
+    else if (e.type === 'title') drawTitle(ctx, r, R.w, R.h, e.style | 0);
+    else if (e.type === 'stat') drawStatEl(ctx, r, R.w, R.h, e.style | 0);
+    else if (e.type === 'exercises') drawExEl(ctx, r, R.w, R.h, e.style | 0, o);
+    else if (e.type === 'logo') drawLogoEl(ctx, sc, R.w, R.h);
+    else if (e.type === 'brand') drawBrandEl(ctx, R.w, R.h);
+    else if (e.type === 'footer') drawFooterEl(ctx, r, R.w, R.h);
+    else if (e.type === 'route' && r.route && r.route.length > 1) drawRoute(ctx, r.route, 0, 0, R.w, R.h, (e.style | 0) === 1 && e.__map && e.__map.m && e.__map.m.loaded ? e.__map.m : null);
+    ctx.restore();
+  }
+  function drawSel(ctx, e, W, H, px) {
+    var R = rectPx(e, W, H);
+    ctx.save(); ctx.translate(R.x + R.w / 2, R.y + R.h / 2); if (e.rot) ctx.rotate(e.rot); ctx.translate(-R.w / 2, -R.h / 2);
+    ctx.lineWidth = 2.5 * px; ctx.strokeStyle = ORANGE; ctx.setLineDash([9 * px, 6 * px]); ctx.strokeRect(0, 0, R.w, R.h); ctx.setLineDash([]);
+    if (!e.fixed) {                                                 // tirador de tamaño (esquina inferior derecha)
+      ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(R.w, R.h, 13 * px, 0, 7); ctx.fill();
+      ctx.lineWidth = 2.5 * px; ctx.strokeStyle = '#1b1203'; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(R.w - 6 * px, R.h + 6 * px); ctx.lineTo(R.w + 6 * px, R.h - 6 * px); ctx.moveTo(R.w + 6 * px, R.h - 1 * px); ctx.lineTo(R.w + 6 * px, R.h - 6 * px); ctx.lineTo(R.w + 1 * px, R.h - 6 * px);
+      ctx.moveTo(R.w - 6 * px, R.h + 1 * px); ctx.lineTo(R.w - 6 * px, R.h + 6 * px); ctx.lineTo(R.w - 1 * px, R.h + 6 * px); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  /* Dibuja la escena entera en ctx. o: { scale, placeholders, ghost, sel (id), pxs (px de lienzo por px de pantalla) } */
+  function drawScene(ctx, sc, o) {
+    o = o || {}; var fm = FORMATS[sc.format] || FORMATS.story, W = fm.w, H = fm.h, k = o.scale || 1;
+    ctx.save(); ctx.scale(k, k);
+    ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
+    var g = ctx.createRadialGradient(W * 0.2, H * 0.25, 0, W * 0.2, H * 0.25, W * 0.9); g.addColorStop(0, 'rgba(255,45,45,.16)'); g.addColorStop(1, 'rgba(255,45,45,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var g2 = ctx.createRadialGradient(W * 0.9, H * 0.7, 0, W * 0.9, H * 0.7, W * 0.9); g2.addColorStop(0, 'rgba(58,116,255,.14)'); g2.addColorStop(1, 'rgba(58,116,255,0)'); ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    sc.elements.forEach(function (e) { drawElement(ctx, sc, e, W, H, o); });
+    if (o.sel) sc.elements.forEach(function (e) { if (e.id === o.sel) drawSel(ctx, e, W, H, o.pxs || 3); });
+    ctx.restore();
+  }
+  /* Mapas reales (solo recorrido con estilo «Mapa real»): se descargan una vez por tamaño */
+  function prepMaps(sc) {
+    var jobs = [];
+    sc.elements.forEach(function (e) {
+      if (e.type !== 'route' || (e.style | 0) !== 1 || !root.RunMap || !sc.r.route || sc.r.route.length < 2) return;
+      var fm = FORMATS[sc.format], w = Math.round(e.w * fm.w), h = Math.round(e.h * fm.h), key = w + 'x' + h + ':' + sc.r.route.length;
+      if (e.__map && e.__map.key === key) return;
+      jobs.push(root.RunMap.render(sc.r.route, w, h).then(function (m) { e.__map = { key: key, m: m }; }).catch(function () { e.__map = { key: key, m: null }; }));
+    });
+    return jobs.length ? Promise.all(jobs) : Promise.resolve();
+  }
+  var fontsOK = false;
+  function drawTo(canvas, sc, o) {
+    var fm = FORMATS[sc.format] || FORMATS.story, k = o.scale || 1;
+    canvas.width = Math.max(1, Math.round(fm.w * k)); canvas.height = Math.max(1, Math.round(fm.h * k));
+    drawScene(canvas.getContext('2d'), sc, o);
+    return canvas;
+  }
+  /* Pinta la escena en un canvas. o.edit: huecos vacíos y selección (vista previa); sin o.edit queda lista para exportar. */
+  function render(canvas, sc, o) {
+    o = o || {}; var oo = { scale: o.scale, placeholders: !!o.edit, sel: o.edit ? o.sel : null, pxs: o.pxs };
+    var go = function () { fontsOK = true; return prepMaps(sc).then(function () { return drawTo(canvas, sc, oo); }); };
+    return fontsOK ? go() : fontsReady().then(go);
+  }
+  function renderThumb(canvas, sc, width) {
+    var fm = FORMATS[sc.format] || FORMATS.story;
+    return fontsReady().then(function () { fontsOK = true; return drawTo(canvas, sc, { scale: width / fm.w, placeholders: true, ghost: true }); });
+  }
+
+  /* ---------- Gestos sobre la escena ---------- */
+  function toLocal(e, W, H, x, y) {                                // punto del lienzo → coordenadas locales del elemento (sin giro)
+    var R = rectPx(e, W, H), dx = x - (R.x + R.w / 2), dy = y - (R.y + R.h / 2), c = Math.cos(-e.rot || 0), s = Math.sin(-e.rot || 0);
+    return { x: dx * c - dy * s + R.w / 2, y: dx * s + dy * c + R.h / 2, w: R.w, h: R.h };
+  }
+  function hitTest(sc, x, y) {
+    var fm = FORMATS[sc.format] || FORMATS.story;
+    for (var i = sc.elements.length - 1; i >= 0; i--) {
+      var e = sc.elements[i], p = toLocal(e, fm.w, fm.h, x, y);
+      if (p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h) return e;
+    }
+    return null;
+  }
+  function handleHit(sc, e, x, y, rad) {
+    var fm = FORMATS[sc.format] || FORMATS.story, p = toLocal(e, fm.w, fm.h, x, y);
+    return Math.abs(p.x - p.w) <= rad && Math.abs(p.y - p.h) <= rad;
+  }
+  function resizeBy(sc, e, e0, dx, dy) {                           // arrastrar la esquina inferior derecha; la superior izquierda queda fija
+    var fm = FORMATS[sc.format] || FORMATS.story, W = fm.w, H = fm.h, c = Math.cos(e0.rot || 0), s = Math.sin(e0.rot || 0);
+    var ldx = dx * c + dy * s, ldy = -dx * s + dy * c, nw = Math.max(0.05, e0.w + ldx / W), nh = Math.max(0.03, e0.h + ldy / H);
+    var w0 = e0.w * W, h0 = e0.h * H, cx0 = e0.x * W + w0 / 2, cy0 = e0.y * H + h0 / 2;
+    var tlx = cx0 + (-w0 / 2) * c - (-h0 / 2) * s, tly = cy0 + (-w0 / 2) * s + (-h0 / 2) * c, w1 = nw * W, h1 = nh * H;
+    var cx1 = tlx + (w1 / 2) * c - (h1 / 2) * s, cy1 = tly + (w1 / 2) * s + (h1 / 2) * c;
+    e.w = nw; e.h = nh; e.x = cx1 / W - nw / 2; e.y = cy1 / H - nh / 2;
   }
 
   function toBlob(canvas) {
@@ -1841,7 +1896,7 @@ svg { overflow: visible; }
   }
 
 
-  /* ---------- Vídeo: el vídeo del usuario de fondo + la tarjeta (logo, resultado, ejercicios) encima ---------- */
+  /* ---------- Vídeo: todos los vídeos de la escena se reproducen a la vez y se graba la tarjeta entera ---------- */
   var VMIMES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
   function videoMime() {
     var MR = root.MediaRecorder;
@@ -1850,25 +1905,24 @@ svg { overflow: visible; }
     return null;
   }
   function videoSupported() { return !!(videoMime() && root.HTMLCanvasElement && root.HTMLCanvasElement.prototype.captureStream); }
-  /* Capa con todo menos el fondo (transparente donde va el vídeo) */
-  function renderOverlay(o) {
-    var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k];
-    o2.overlay = true; o2.photo = null;
-    return render(c, o2).then(function () { return c; });
+  function videosOf(sc) { return sc.elements.filter(function (e) { return e.type === 'media' && e.media && e.media.kind === 'video'; }).map(function (e) { return e.media.el; }); }
+  function masterVideo(sc) {                                       // el más largo manda en la duración y el audio
+    var vs = videosOf(sc), best = null;
+    vs.forEach(function (v) { if (!best || (v.duration || 0) > (best.duration || 0)) best = v; });
+    return best;
   }
-  /* Graba el vídeo con la tarjeta encima. opts: { onProgress(0..1), maxSec, start } → Promise<{blob, mime, ext}> (graba desde `start` hasta `start+maxSec`) */
-  function recordVideo(o, video, opts) {
+  /* Graba desde `start` hasta `start+maxSec` (opts: { onProgress(0..1), maxSec, start }) → Promise<{blob, mime, ext}> */
+  function recordVideo(sc, opts) {
     opts = opts || {};
-    var mime = videoMime();
-    if (!mime) return Promise.reject(new Error('sin-soporte'));
-    var front = opts.role === 'board';
-    return (front ? (function () { var c = root.document.createElement('canvas'), o2 = {}; for (var k in o) o2[k] = o[k]; return render(c, o2).then(function () { c.__rect = o2.__boardRect; return c; }); })() : renderOverlay(o)).then(function (ov) {
+    var mime = videoMime(), video = masterVideo(sc), vids = videosOf(sc);
+    if (!mime || !video) return Promise.reject(new Error('sin-soporte'));
+    return fontsReady().then(function () { return prepMaps(sc); }).then(function () {
       return new Promise(function (resolve, reject) {
-        var scale = Math.min(1, 1280 / Math.max(ov.width, ov.height)), W = Math.round(ov.width * scale), H = Math.round(ov.height * scale);
-        var cv = root.document.createElement('canvas'); cv.width = W; cv.height = H;
+        var fm = FORMATS[sc.format] || FORMATS.story, scale = Math.min(1, 1280 / Math.max(fm.w, fm.h));
+        var cv = root.document.createElement('canvas'); cv.width = Math.round(fm.w * scale); cv.height = Math.round(fm.h * scale);
         var ctx = cv.getContext('2d'), t0 = opts.start || 0, end = Math.min(video.duration || 60, t0 + (opts.maxSec || 60)), dur = Math.max(0.1, end - t0);
         var stream = cv.captureStream(30), rec, chunks = [], done = false, raf = 0;
-        try {                                                   // audio del vídeo sin que suene por el altavoz (una sola vez por elemento)
+        try {                                                   // audio del vídeo principal sin que suene por el altavoz (una sola vez por elemento)
           var AC = root.AudioContext || root.webkitAudioContext;
           if (AC) {
             if (!video.__dest) { var ac0 = new AC(); video.__dest = ac0.createMediaStreamDestination(); ac0.createMediaElementSource(video).connect(video.__dest); video.__ac = ac0; }
@@ -1876,9 +1930,9 @@ svg { overflow: visible; }
             video.__dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
           }
         } catch (e) {}
+        function pauseAll() { vids.forEach(function (v) { try { v.pause(); v.loop = false; } catch (e) {} }); }
         function finish(err) {
-          if (done) return; done = true; cancelAnimationFrame(raf);
-          try { video.pause(); } catch (e) {}
+          if (done) return; done = true; cancelAnimationFrame(raf); pauseAll();
           if (err) reject(err);
         }
         try { rec = new root.MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4000000 }); } catch (e) { return reject(e); }
@@ -1890,19 +1944,7 @@ svg { overflow: visible; }
           resolve({ blob: new Blob(chunks, { type: m }), mime: m, ext: m.indexOf('mp4') >= 0 ? 'mp4' : 'webm' });
         };
         function frame() {
-          ctx.fillStyle = '#050506'; ctx.fillRect(0, 0, W, H);
-          if (front) {
-            ctx.drawImage(ov, 0, 0, W, H);
-            var R = ov.__rect;
-            if (R && video.videoWidth) {
-              var sx = W / ov.width, sy = H / ov.height;
-              ctx.save(); rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.clip(); ctx.drawImage(video, R.x * sx, R.y * sy, R.w * sx, R.h * sy); ctx.restore();
-              ctx.lineWidth = 3 * sx; ctx.strokeStyle = 'rgba(255,255,255,.28)'; rr(ctx, R.x * sx, R.y * sy, R.w * sx, R.h * sy, 26 * sx); ctx.stroke();
-            }
-          } else {
-            if (video.videoWidth) cover(ctx, video, 0, 0, W, H);
-            ctx.drawImage(ov, 0, 0, W, H);
-          }
+          drawScene(ctx, sc, { scale: scale });
           if (opts.onProgress) opts.onProgress(Math.max(0, Math.min(1, (video.currentTime - t0) / dur)));
           if (video.ended || video.currentTime >= end - 0.05) { try { rec.stop(); } catch (e) {} finish(); return; }
           raf = root.requestAnimationFrame(frame);
@@ -1910,11 +1952,12 @@ svg { overflow: visible; }
         function go() {
           rec.start(500);
           var pl = video.play();
+          vids.forEach(function (v) { if (v !== video) { try { v.play(); } catch (e) {} } });
           function begin() { raf = root.requestAnimationFrame(frame); }
           if (pl && pl.then) pl.then(begin, function () { video.muted = true; video.play().then(begin, function (e) { finish(e); try { rec.stop(); } catch (x) {} }); });
           else begin();
         }
-        video.muted = false; video.currentTime = t0;
+        vids.forEach(function (v) { v.loop = v !== video; v.muted = v !== video; try { v.currentTime = v === video ? t0 : (v.duration ? t0 % v.duration : 0); } catch (e) {} });
         var started = false; function once() { if (started) return; started = true; video.removeEventListener('seeked', once); go(); }
         video.addEventListener('seeked', once); setTimeout(once, 600);
       });
@@ -1922,14 +1965,14 @@ svg { overflow: visible; }
   }
   /* Instagram admite hasta 60 s por historia: un vídeo más largo se graba en partes de 60 s, una detrás de otra. → Promise<[{blob,mime,ext}]> */
   var PART_SEC = 60;
-  function partsOf(video) { return Math.max(1, Math.ceil(((video.duration || PART_SEC) - 0.05) / PART_SEC)); }
-  function recordVideoParts(o, video, opts) {
+  function partsOf(video) { return Math.max(1, Math.ceil(((video && video.duration || PART_SEC) - 0.05) / PART_SEC)); }
+  function recordVideoParts(sc, opts) {
     opts = opts || {};
-    var n = partsOf(video), out = [], i = 0;
+    var n = partsOf(masterVideo(sc)), out = [], i = 0;
     function next() {
       if (i >= n) return Promise.resolve(out);
       var idx = i++;
-      return recordVideo(o, video, { start: idx * PART_SEC, maxSec: PART_SEC, role: opts.role, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
+      return recordVideo(sc, { start: idx * PART_SEC, maxSec: PART_SEC, onProgress: function (p) { if (opts.onProgress) opts.onProgress((idx + p) / n, idx + 1, n); } })
         .then(function (v) { out.push(v); return next(); });
     }
     return next();
@@ -1965,7 +2008,289 @@ svg { overflow: visible; }
     return saveVideo(vs);
   }
 
-  root.Share = { LAYOUT_SLOTS: LAYOUT_SLOTS, FORMATS: FORMATS, render: render, share: share, save: save, recordVideo: recordVideo, recordVideoParts: recordVideoParts, partsOf: partsOf, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, renderOverlay: renderOverlay, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
+  root.Share = { FORMATS: FORMATS, TEMPLATES: TEMPLATES, STYLES: STYLES, TYPE_LABEL: TYPE_LABEL, makeScene: makeScene, newElement: newElement, mediaOf: mediaOf, render: render, renderThumb: renderThumb, drawScene: drawScene, hitTest: hitTest, handleHit: handleHit, resizeBy: resizeBy, share: share, save: save, recordVideo: recordVideo, recordVideoParts: recordVideoParts, masterVideo: masterVideo, videosOf: videosOf, partsOf: partsOf, videoSupported: videoSupported, saveVideo: saveVideo, shareVideo: shareVideo, saveGallery: saveGallery, native: native, file: file, fmt: fmt };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* ---- shareui.js ---- */
+/* 4TIMER — editor de la tarjeta para compartir: plantillas en ruleta, elementos que se mueven, redimensionan, giran y se ponen en capas */
+(function (root) {
+  'use strict';
+  function K() { return root.AppKit; }
+  var PREV_SCALE = 0.5;                                 // la vista previa se dibuja a media resolución (más fluida al arrastrar)
+
+  /* host: contenedor · cfg: { model() → datos del entreno, text() → texto para compartir, isRun, gymName, logoSrc, logoRound } */
+  function mount(host, cfg) {
+    var S = root.Share, k = K(), ICON = k.ICON, VS = S.videoSupported();
+    function $(s) { return k.$(s, host); }
+    function $$(s) { return k.$$(s, host); }
+    var st = { format: 'story', tpl: 0, sc: null, sel: null, spare: [], busy: false, logo: null }, seq = 0, drag = null, thumbT = 0, dead = false;
+
+    host.innerHTML =
+      '<div class="seg-ctl" id="ed-fmt" role="group" aria-label="Tamaño"><button class="btn small on" data-fmt="story">Stories 9:16</button><button class="btn small" data-fmt="post">Publicación 4:5</button></div>' +
+      '<div class="tpl-strip" id="ed-tpl" role="listbox" aria-label="Plantillas">' +
+      S.TEMPLATES.map(function (t, i) { return '<button class="tpl' + (i === 0 ? ' on' : '') + '" data-tpl="' + i + '" role="option"><canvas></canvas><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
+      '<div class="share-prev ed-prev"><canvas id="sh-canvas" aria-label="Vista previa editable de la imagen para compartir"></canvas></div>' +
+      '<p class="hint" id="ed-hint">Toca un recuadro para editarlo y arrástralo. Desliza el fondo a la izquierda para cambiar de plantilla.</p>' +
+      '<div class="ed-bar" id="ed-bar" hidden>' +
+      '<div class="ed-sel"><b id="ed-name"></b><span id="ed-deselect" class="ed-x" role="button" tabindex="0">Cerrar ✕</span></div>' +
+      '<div class="seg-ctl" id="ed-styles" role="group" aria-label="Estilo"></div>' +
+      '<div class="ed-ops">' +
+      '<button class="btn small" data-op="up">Delante</button><button class="btn small" data-op="down">Detrás</button>' +
+      '<button class="btn small" data-op="smaller">Más pequeño</button><button class="btn small" data-op="bigger">Más grande</button>' +
+      '<button class="btn small" data-op="rotl">Girar ↺</button><button class="btn small" data-op="rotr">Girar ↻</button>' +
+      '<button class="btn small" data-op="src" data-media>Cambiar foto / vídeo</button><button class="btn small" data-op="clear" data-media>Vaciar</button>' +
+      '<button class="btn small" data-op="fill" data-media>Poner de fondo</button><button class="btn small" data-op="free" data-fixed>Liberar fondo</button>' +
+      '<button class="btn small danger" data-op="del">Eliminar</button></div></div>' +
+      '<div class="ed-add" id="ed-add"></div>' +
+      '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
+      '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
+      '<div id="sh-vid-box" hidden><button class="btn block" id="sh-vshare" style="margin-top:10px">' + ICON.share + 'Compartir vídeo</button>' +
+      '<button class="btn primary block" id="sh-vsave" style="margin-top:10px">' + ICON.download + 'Guardar vídeo</button>' +
+      '<p class="hint">Instagram recorta a 15 s lo que se le envía desde otra app con «Compartir». Para historias de hasta 60 s pulsa «Guardar vídeo» y súbelo desde la galería dentro de Instagram. Si el vídeo dura más de 60 s se guarda en partes de 60 s. Si hay varios vídeos se graban a la vez; manda el más largo.</p>' +
+      '<div class="vprog" id="sh-vprog" hidden><div class="vbar"><i id="sh-vbar"></i></div><span id="sh-vtxt">Grabando…</span></div></div>' +
+      '<p class="hint">En «Compartir» elige Instagram (Stories o publicación) en el menú del móvil. Si tu navegador no lo permite, se guarda la imagen para que la subas tú.</p>';
+
+    var canvas = $('#sh-canvas');
+
+    /* ---------- escena ---------- */
+    function data(pool) { return { r: cfg.model(), logo: st.logo, gymName: cfg.gymName, isRun: !!cfg.isRun, pool: pool || [] }; }
+    function build(i, pool) { var sc = S.makeScene(i, st.format, data(pool)); st.spare = sc.spare || []; return sc; }
+    st.sc = build(0, []);
+    function selEl() { return st.sel ? st.sc.elements.filter(function (e) { return e.id === st.sel; })[0] || null : null; }
+
+    function draw(final) {
+      var my = ++seq, sc = st.sc; sc.r = cfg.model(); sc.logo = st.logo; sc.gymName = cfg.gymName;
+      var b = canvas.getBoundingClientRect(), fm = S.FORMATS[sc.format];
+      var o = final ? { edit: false } : { edit: true, sel: st.sel, scale: PREV_SCALE, pxs: b.width ? fm.w / b.width : 3 };
+      return S.render(canvas, sc, o).then(function () { return my; });
+    }
+    function changed() { draw(); bar(); thumbsLater(); }
+
+    /* ---------- ruleta de plantillas ---------- */
+    function thumbs() {
+      if (dead) return;
+      $$('.tpl').forEach(function (b) {
+        var i = +b.dataset.tpl, sc = S.makeScene(i, st.format, data(S.mediaOf(st.sc).concat(st.spare)));
+        S.renderThumb(b.querySelector('canvas'), sc, 84);
+      });
+    }
+    function thumbsLater() { clearTimeout(thumbT); thumbT = setTimeout(thumbs, 250); }
+    function markTpl() {
+      $$('.tpl').forEach(function (b) { var on = +b.dataset.tpl === st.tpl; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on && b.scrollIntoView) { try { b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {} } });
+    }
+    function setTpl(i) {
+      var n = S.TEMPLATES.length; i = ((i % n) + n) % n;
+      var pool = S.mediaOf(st.sc).concat(st.spare);       // las fotos y vídeos ya cargados pasan a los huecos de la nueva plantilla
+      st.tpl = i; st.sc = build(i, pool); st.sel = null; markTpl(); changed(); vidBox();
+    }
+    host.addEventListener('click', function (e) {
+      var t = e.target.closest('.tpl'); if (t) { setTpl(+t.dataset.tpl); return; }
+      var f = e.target.closest('[data-fmt]');
+      if (f) { st.format = f.dataset.fmt; st.sc.format = st.format; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === f); }); changed(); }
+    });
+
+    /* ---------- barra del elemento seleccionado ---------- */
+    function bar() {
+      var e = selEl(), b = $('#ed-bar'); b.hidden = !e;
+      renderAdd();
+      if (!e) return;
+      var styles = S.STYLES[e.type] || [], box = $('#ed-styles');
+      $('#ed-name').textContent = S.TYPE_LABEL[e.type] + (e.label && e.type === 'media' ? ' · ' + e.label : '');
+      box.hidden = !styles.length;
+      box.innerHTML = styles.map(function (n, i) { return '<button class="btn small' + (i === (e.style | 0) ? ' on' : '') + '" data-est="' + i + '">' + n + '</button>'; }).join('');
+      $$('#ed-bar [data-media]').forEach(function (x) { x.hidden = e.type !== 'media' || (x.dataset.op === 'clear' && !e.media) || (x.dataset.op === 'fill' && e.fixed && e.w > 0.99); });
+      $$('#ed-bar [data-fixed]').forEach(function (x) { x.hidden = !(e.type === 'media' && e.fixed); });
+    }
+    function renderAdd() {
+      var have = {}; st.sc.elements.forEach(function (e) { have[e.type] = true; });
+      var types = ['media', 'title', 'stat', 'exercises', 'logo', 'brand', 'footer'].concat(cfg.isRun ? ['route'] : []);
+      $('#ed-add').innerHTML = '<span class="ed-add-l">Añadir</span>' + types.filter(function (t) { return t === 'media' || !have[t]; }).map(function (t) {
+        return '<button class="btn small" data-add="' + t + '">+ ' + S.TYPE_LABEL[t] + '</button>';
+      }).join('');
+    }
+    function move(e, delta) {                              // cambia el orden de capas
+      var a = st.sc.elements, i = a.indexOf(e), j = i + delta; if (j < 0 || j >= a.length) return;
+      a.splice(i, 1); a.splice(j, 0, e);
+    }
+    function scaleBy(e, f) {
+      var cx = e.x + e.w / 2, cy = e.y + e.h / 2; e.w = Math.min(1.5, Math.max(0.05, e.w * f)); e.h = Math.min(1.5, Math.max(0.03, e.h * f)); e.x = cx - e.w / 2; e.y = cy - e.h / 2;
+    }
+    host.addEventListener('click', function (ev) {
+      var e = selEl(), t;
+      if ((t = ev.target.closest('[data-add]'))) {
+        var type = t.dataset.add;
+        if (type !== 'media') { var ex = st.sc.elements.filter(function (x) { return x.type === type; })[0]; if (ex) { st.sel = ex.id; changed(); return; } }
+        var ne = S.newElement(type, st.sc); if (type === 'media') ne.label = 'Foto o vídeo';
+        st.sc.elements.push(ne); st.sel = ne.id; changed();
+        if (type === 'media') openSheet(ne);
+        return;
+      }
+      if (ev.target.closest('#ed-deselect')) { st.sel = null; changed(); return; }
+      if (!e) return;
+      if ((t = ev.target.closest('[data-est]'))) { e.style = +t.dataset.est; changed(); return; }
+      if (!(t = ev.target.closest('[data-op]'))) return;
+      var op = t.dataset.op;
+      if (op === 'up') move(e, 1); else if (op === 'down') move(e, -1);
+      else if (op === 'bigger') scaleBy(e, 1.1); else if (op === 'smaller') scaleBy(e, 1 / 1.1);
+      else if (op === 'rotl' || op === 'rotr') { e.rot = (e.rot || 0) + (op === 'rotl' ? -0.05 : 0.05); if (Math.abs(e.rot) < 0.01) e.rot = 0; }
+      else if (op === 'del') { dropMedia(e); st.sc.elements.splice(st.sc.elements.indexOf(e), 1); st.sel = null; }
+      else if (op === 'src') { openSheet(e); return; }
+      else if (op === 'clear') dropMedia(e);
+      else if (op === 'fill') { e.x = 0; e.y = 0; e.w = 1; e.h = 1; e.rot = 0; e.style = 0; e.fixed = true; var a = st.sc.elements; a.splice(a.indexOf(e), 1); a.unshift(e); }
+      else if (op === 'free') e.fixed = false;
+      changed(); vidBox();
+    });
+    host.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.id === 'ed-deselect') { st.sel = null; changed(); } });
+
+    /* ---------- gestos sobre la tarjeta ---------- */
+    function pt(ev) {
+      var b = canvas.getBoundingClientRect(), fm = S.FORMATS[st.sc.format], sx = b.width ? fm.w / b.width : 1, sy = b.height ? fm.h / b.height : 1;
+      return { x: (ev.clientX - b.left) * sx, y: (ev.clientY - b.top) * sy, px: sx, fm: fm };
+    }
+    function snap(e) { return { x: e.x, y: e.y, w: e.w, h: e.h, rot: e.rot || 0 }; }
+    canvas.addEventListener('pointerdown', function (ev) {
+      if (st.busy || (ev.button && ev.button !== 0)) return;
+      var p = pt(ev), cur = selEl(), hit = null;
+      if (cur && !cur.fixed && S.handleHit(st.sc, cur, p.x, p.y, 44 * p.px)) drag = { mode: 'resize', el: cur, sx: p.x, sy: p.y, e0: snap(cur), moved: false };
+      else {
+        hit = S.hitTest(st.sc, p.x, p.y);
+        if (hit && !hit.fixed) { st.sel = hit.id; drag = { mode: 'move', el: hit, sx: p.x, sy: p.y, ox: hit.x, oy: hit.y, moved: false, wasSel: cur === hit }; }
+        else drag = { mode: 'swipe', el: hit, sx: p.x, sy: p.y, dx: 0, dy: 0 };
+      }
+      try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      if (ev.cancelable) ev.preventDefault();
+      draw(); bar();
+    });
+    canvas.addEventListener('pointermove', function (ev) {
+      if (!drag) return;
+      var p = pt(ev), dx = p.x - drag.sx, dy = p.y - drag.sy, fm = p.fm;
+      if (Math.abs(dx) + Math.abs(dy) > 8 * p.px) drag.moved = true;
+      if (drag.mode === 'move') {
+        var e = drag.el; e.x = Math.max(-e.w / 2, Math.min(1 - e.w / 2, drag.ox + dx / fm.w)); e.y = Math.max(-e.h / 2, Math.min(1 - e.h / 2, drag.oy + dy / fm.h)); draw();
+      } else if (drag.mode === 'resize') {
+        var r = drag.e0, c = drag.el; c.x = r.x; c.y = r.y; c.w = r.w; c.h = r.h; S.resizeBy(st.sc, c, r, dx, dy); draw();
+      } else { drag.dx = dx; drag.dy = dy; }
+    });
+    function endDrag(ev, cancel) {
+      if (!drag) return; var d = drag; drag = null;
+      try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      if (cancel) { draw(); return; }
+      var p = pt(ev);
+      if (d.mode === 'swipe') {
+        if (Math.abs(d.dx) > 70 * p.px && Math.abs(d.dx) > Math.abs(d.dy) * 1.3) { setTpl(st.tpl + (d.dx < 0 ? 1 : -1)); return; }
+        if (!d.moved) { st.sel = d.el ? d.el.id : null; if (d.el && d.el.type === 'media' && !d.el.media) openSheet(d.el); }
+      } else if (d.mode === 'move' && !d.moved && d.el.type === 'media' && !d.el.media) openSheet(d.el);
+      changed();
+    }
+    canvas.addEventListener('pointerup', function (ev) { endDrag(ev, false); });
+    canvas.addEventListener('pointercancel', function (ev) { endDrag(ev, true); });
+    canvas.addEventListener('keydown', function (ev) { if (ev.key === 'ArrowLeft') setTpl(st.tpl - 1); else if (ev.key === 'ArrowRight') setTpl(st.tpl + 1); });
+    canvas.tabIndex = 0;
+
+    /* ---------- fotos y vídeos: cámara o galería ---------- */
+    function dropMedia(e) {
+      if (e.media) { var m = e.media; if (m.kind === 'video') { try { m.el.pause(); } catch (x) {} } if (m.url) { try { URL.revokeObjectURL(m.url); } catch (x) {} } e.media = null; }
+    }
+    function loadImage(file) {
+      return new Promise(function (res) {
+        var url = URL.createObjectURL(file), i = new Image();
+        i.onload = function () { URL.revokeObjectURL(url); res({ el: i, kind: 'img' }); };
+        i.onerror = function () { URL.revokeObjectURL(url); res(null); };
+        i.src = url;
+      });
+    }
+    function loadVideo(file) {
+      return new Promise(function (res) {
+        var v = document.createElement('video'), url = URL.createObjectURL(file), done = false;
+        v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.muted = true;
+        function fail() { if (done) return; done = true; try { URL.revokeObjectURL(url); } catch (e) {} res(null); }
+        v.onerror = fail;
+        v.onloadeddata = function () {
+          if (!(v.duration > 0)) return fail();
+          v.onseeked = function () { v.onseeked = null; if (done) return; done = true; res({ el: v, kind: 'video', url: url }); };
+          try { v.currentTime = Math.min(0.2, v.duration / 2); } catch (e) {}
+        };
+        v.src = url;
+      });
+    }
+    function setMedia(e, file) {
+      if (!file) return;
+      var isVid = /^video\//.test(file.type) || /\.(mp4|mov|webm|m4v)$/i.test(file.name || '');
+      if (isVid && !VS) { k.toast('Este móvil no puede grabar vídeos con la tarjeta. Prueba con una foto'); return; }
+      (isVid ? loadVideo(file) : loadImage(file)).then(function (m) {
+        if (dead) return;
+        if (!m) { k.toast(isVid ? 'No se pudo abrir ese vídeo' : 'No se pudo abrir esa imagen'); return; }
+        dropMedia(e); e.media = m; st.sel = e.id; changed(); vidBox();
+        if (isVid) { var n = S.partsOf(m.el); if (n > 1) k.toast('El vídeo dura ' + Math.round(m.el.duration) + ' s: se grabará en ' + n + ' partes de 60 s (límite de Instagram)'); }
+      });
+    }
+    function closeSheet() { var s = document.getElementById('md-sheet'); if (s) s.remove(); }
+    function openSheet(e) {
+      closeSheet();
+      var back = document.createElement('div'); back.className = 'sheet-back'; back.id = 'md-sheet';
+      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Añadir foto o vídeo"><h2>Añadir foto o vídeo</h2>' +
+        '<label class="btn block">' + ICON.camera + 'Hacer foto<input type="file" accept="image/*" capture="environment" hidden data-md></label>' +
+        (VS ? '<label class="btn block" style="margin-top:10px">' + ICON.camera + 'Grabar vídeo<input type="file" accept="video/*" capture="environment" hidden data-md></label>' : '') +
+        '<label class="btn block" style="margin-top:10px">' + ICON.image + (VS ? 'Galería (foto o vídeo)' : 'Galería') + '<input type="file" accept="' + (VS ? 'image/*,video/*' : 'image/*') + '" hidden data-md></label>' +
+        '<button class="btn block" id="md-cancel" style="margin-top:10px">Cancelar</button></div>';
+      document.body.appendChild(back);
+      back.addEventListener('click', function (ev) { if (ev.target === back || ev.target.closest('#md-cancel')) closeSheet(); });
+      back.addEventListener('change', function (ev) { var f = ev.target.files && ev.target.files[0]; closeSheet(); setMedia(e, f); });
+    }
+
+    /* ---------- exportar ---------- */
+    function vidBox() { var b = $('#sh-vid-box'); if (b) b.hidden = !(VS && S.videosOf(st.sc).length); }
+    function exportImg(fn, then) { draw(true).then(function () { return fn(canvas); }).then(function (r) { draw(); then(r); }); }
+    $('#sh-share').addEventListener('click', function () {
+      exportImg(function (c) { return S.share(c, cfg.text() + ' #4TIMER'); }, function (r) {
+        if (r === 'saved') k.toast('Imagen guardada. Ya puedes subirla a Instagram'); else if (r === 'error') k.toast('No se pudo compartir');
+      });
+    });
+    $('#sh-save').addEventListener('click', function () {
+      exportImg(function (c) { return S.save(c); }, function (r) { k.toast(r === 'gallery' ? 'Imagen guardada en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar. Prueba con «Compartir»' : 'Imagen descargada en la carpeta de descargas'); });
+    });
+    function makeVideo(what) {
+      if (st.busy || !S.masterVideo(st.sc)) return;
+      st.busy = true; st.sel = null; draw();
+      var box = $('#sh-vprog'); box.hidden = false; $('#sh-vbar').style.width = '0%'; $('#sh-vtxt').textContent = 'Grabando… no cierres la pantalla';
+      $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = true; });
+      st.sc.r = cfg.model();
+      S.recordVideoParts(st.sc, { onProgress: function (p, i, n) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; $('#sh-vtxt').textContent = n > 1 ? 'Grabando parte ' + i + ' de ' + n + '… no cierres la pantalla' : 'Grabando… no cierres la pantalla'; } })
+        .then(function (v) {
+          $('#sh-vtxt').textContent = what === 'share' ? 'Abriendo compartir…' : 'Guardando…';
+          return (what === 'share' ? S.shareVideo(v, cfg.text() + ' #4TIMER') : S.saveVideo(v)).then(function (r) {
+            if (what === 'save') k.toast(r === 'gallery' ? 'Vídeo guardado en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar el vídeo. Prueba con «Compartir vídeo»' : 'Vídeo descargado en la carpeta de descargas');
+            else if (r === 'saved') k.toast('Vídeo descargado. Ya puedes subirlo a Instagram'); else if (r === 'error') k.toast('No se pudo compartir el vídeo');
+          });
+        })
+        .catch(function () { k.toast('No se pudo grabar el vídeo en este móvil'); })
+        .then(function () {
+          st.busy = false; box.hidden = true; $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = false; });
+          S.videosOf(st.sc).forEach(function (v) { try { v.pause(); v.muted = true; v.currentTime = Math.min(0.2, v.duration / 2); } catch (e) {} });
+          draw();
+        });
+    }
+    $('#sh-vshare').addEventListener('click', function () { makeVideo('share'); });
+    $('#sh-vsave').addEventListener('click', function () { makeVideo('save'); });
+
+    /* ---------- arranque ---------- */
+    var img = new Image();
+    img.onload = function () { if (cfg.logoRound) img.__round = true; st.logo = img; changed(); };
+    img.src = cfg.logoSrc;
+    renderAdd(); draw(); thumbs();
+
+    return {
+      refresh: function () { draw(); thumbsLater(); },
+      scene: function () { return st.sc; },
+      state: st,
+      destroy: function () {
+        dead = true; clearTimeout(thumbT); closeSheet();
+        var all = st.sc.elements.map(function (e) { return e.media; }).concat(st.spare);
+        all.forEach(function (m) { if (m && m.kind === 'video') { try { m.el.pause(); } catch (e) {} if (m.url) { try { URL.revokeObjectURL(m.url); } catch (e) {} } } });
+      }
+    };
+  }
+  root.ShareUI = { mount: mount };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* ---- run.js ---- */
@@ -3864,18 +4189,6 @@ svg { overflow: visible; }
   function loadImg(src) {
     return new Promise(function (res) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { res(null); }; i.src = src; });
   }
-  function videoBtns(id, label) {
-    return '<div class="photo-row"><span class="photo-l">' + label + '</span>' +
-      '<label class="btn small">' + ICON.camera + 'Grabar vídeo<input type="file" id="' + id + '-cam" accept="video/*" capture="environment" hidden></label>' +
-      '<label class="btn small">' + ICON.image + 'Subir vídeo<input type="file" id="' + id + '-gal" accept="video/*" hidden></label>' +
-      '<button class="btn small" id="' + id + '-rm" hidden>Quitar</button></div>';
-  }
-  function photoBtns(id, label, withCam) {
-    return '<div class="photo-row"><span class="photo-l">' + label + '</span>' +
-      (withCam ? '<label class="btn small">' + ICON.camera + 'Hacer foto<input type="file" id="' + id + '-cam" accept="image/*" capture="environment" hidden></label>' : '') +
-      '<label class="btn small">' + ICON.image + 'Subir foto<input type="file" id="' + id + '-gal" accept="image/*" hidden></label>' +
-      '<button class="btn small" id="' + id + '-rm" hidden>Quitar</button></div>';
-  }
   /* Formulario para un entreno hecho fuera de la app (reloj y pizarra de clase) */
   function manualFormHtml() {
     return '<div class="card-form">' +
@@ -3890,33 +4203,13 @@ svg { overflow: visible; }
   }
   function viewShare(manual) {
     if (!manual && !lastResult) return go('#/');
-    var VS = window.Share.videoSupported();
-    var st = { layout: 'std', slots: { strip3: [], strip4: [], collage: [] }, format: 'story', style: 'std', photo: null, board: null, showEx: true, logo: null, type: 'fortime' };
-    var s = Store.settings();
+    var st = { type: 'fortime', hide: true }, s = Store.settings();
+    var res = manual ? null : lastResult, isRun = !!(res && res.modeId === 'run');
     app.innerHTML = '<div class="screen share-view">' + header(manual ? 'Compartir entreno' : 'Compartir', { back: '#/' }) +
       (manual ? '<p class="lead">¿Has entrenado con el reloj y la pizarra de clase? Rellena el resultado y crea tu imagen.</p>' + manualFormHtml() : '') +
-      '<div class="share-prev"><canvas id="sh-canvas" aria-label="Vista previa de la imagen para compartir"></canvas></div>' +
-      '<div class="seg-ctl" role="group" aria-label="Formato"><button class="btn small on" data-fmt="story">Story 9:16</button><button class="btn small" data-fmt="post">Post 4:5</button><button class="btn small" data-fmt="land">Horizontal 16:9</button></div>' +
-      '<div class="seg-ctl" role="group" aria-label="Estilo del logo"><button class="btn small on" data-sty="std">Logo normal</button><button class="btn small" data-sty="logo">Logo grande</button></div>' +
-      '<div class="seg-ctl" id="sh-lay" role="group" aria-label="Estilo de la tarjeta"><button class="btn small on" data-lay="std">Normal</button><button class="btn small" data-lay="strip3">Carrete 3 + fondo</button><button class="btn small" data-lay="strip4">Carrete 4 + 2 fondos</button><button class="btn small" data-lay="collage">Collage 3 + fondo</button></div>' +
-      '<div id="sh-slots" hidden></div><p class="hint" id="sh-lay-hint" hidden>Estos estilos son para Story 9:16 y llevan solo el resultado (sin lista de ejercicios).</p>' +
-      '<div id="sh-std">' + photoBtns('sh-bg', 'Foto de fondo', true) + (VS ? videoBtns('sh-vb', 'Vídeo de fondo') : '') + photoBtns('sh-bd', 'Foto frontal', true) + (VS ? videoBtns('sh-vf', 'Vídeo frontal') : '') +
-      '<label class="chk"><input type="checkbox" id="sh-ex" checked> Mostrar ejercicios</label>' +
-      '<label class="chk"><input type="checkbox" id="sh-top"> Ejercicios arriba a la izquierda (semitransparentes) y entreno abajo</label></div>' +
-      '<label class="chk"><input type="checkbox" id="sh-t" checked> Mostrar el cartel del modo y el nombre</label>' +
-      '<label class="chk"><input type="checkbox" id="sh-s" checked> Mostrar el marcador (tiempo / resultado)</label>' +
-      (manual ? '<button class="btn block" id="sh-hist" style="margin-bottom:10px">' + ICON.history + 'Guardar en el historial</button>' : '') +
-      '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
-      '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
-      '<div id="sh-vid-box" hidden><button class="btn block" id="sh-vshare" style="margin-top:10px">' + ICON.share + 'Compartir vídeo</button>' +
-      '<button class="btn primary block" id="sh-vsave" style="margin-top:10px">' + ICON.download + 'Guardar vídeo</button>' +
-      '<p class="hint">Instagram recorta a 15 s lo que se le envía desde otra app con «Compartir». Para historias de hasta 60 s pulsa «Guardar vídeo» y súbelo desde la galería dentro de Instagram. Si el vídeo dura más de 60 s se guarda en partes de 60 s.</p>' +
-      '<div class="vprog" id="sh-vprog" hidden><div class="vbar"><i id="sh-vbar"></i></div><span id="sh-vtxt">Grabando…</span></div></div>' +
-      '<p class="hint">En «Compartir» elige Instagram (Stories o publicación) en el menú del móvil. Si tu navegador no lo permite, se guarda la imagen para que la subas tú.</p></div>';
-    var canvas = $('#sh-canvas'), seq = 0, res = manual ? null : lastResult;
-    var isRun = !!(res && res.modeId === 'run');
-    if (isRun) { st.hide = true; $('#sh-ex').parentNode.insertAdjacentHTML('beforebegin', '<label class="chk"><input type="checkbox" id="sh-priv" checked> Ocultar inicio y final del recorrido (privacidad)</label>'); $('#sh-ex').parentNode.lastChild.textContent = ' Mostrar parciales por km'; $('#sh-priv').addEventListener('change', function () { st.hide = this.checked; draw(); });
-      $('#sh-priv').parentNode.insertAdjacentHTML('afterend', '<label class="chk"><input type="checkbox" id="sh-map"> Mapa real (se descarga de internet)</label>'); $('#sh-map').addEventListener('change', function () { st.map = this.checked; draw(); }); }
+      (isRun ? '<label class="chk"><input type="checkbox" id="sh-priv" checked> Ocultar inicio y final del recorrido (privacidad)</label>' : '') +
+      '<div id="sh-ed"></div>' +
+      (manual ? '<button class="btn block" id="sh-hist" style="margin-top:10px">' + ICON.history + 'Guardar en el historial</button>' : '') + '</div>';
     var TYPES = { fortime: 'FOR TIME', amrap: 'AMRAP', emom: 'EMOM', otro: 'ENTRENO' };
     function num(id) { var el = $(id); return el ? Math.max(0, parseInt(el.value, 10) || 0) : 0; }
     function buildManual() {
@@ -3932,150 +4225,32 @@ svg { overflow: visible; }
       else { r.kind = 'text'; r.label = 'ENTRENO'; r.value = (name || 'WOD').toUpperCase(); r.sub = 'Entreno completado'; r.name = name || 'Entreno'; }
       return r;
     }
-    function opts(final) {
+    function model() {
       if (manual) res = buildManual();
-      var rd = isRun ? window.RunUI.shareModel(res, st.hide) : res;
-      var lay = (!isRun && st.format === 'story') ? st.layout : 'std';
-      return { hideTitle: st.showT === false, hideStat: st.showS === false, layout: lay, imgs: st.slots[lay] || [], placeholders: !final, format: st.format, style: st.style, photo: st.photo, board: st.board, logo: st.logo, gymName: s.gymName || '4TIME Hybrid & Functional Center', showExercises: st.showEx && rd.lines.length > 0, exTop: !!st.exTop && st.format !== 'land', map: isRun && !!st.map, r: rd };
+      return isRun ? window.RunUI.shareModel(res, st.hide) : res;
     }
-    function draw(final) {
-      var my = ++seq;
-      return window.Share.render(canvas, opts(final)).then(function () { return my; });
-    }
-    /* Estilos con varias fotos: un hueco por foto */
-    function buildSlots() {
-      var box = $('#sh-slots'), names = window.Share.LAYOUT_SLOTS[st.layout];
-      box.hidden = !names; $('#sh-lay-hint').hidden = !names; $('#sh-std').hidden = !!names;
-      if (!names) { box.innerHTML = ''; return; }
-      box.innerHTML = names.map(function (n, i) { return photoBtns('sh-s' + i, n, true); }).join('');
-      names.forEach(function (n, i) {
-        var arr = st.slots[st.layout], rm = $('#sh-s' + i + '-rm'); rm.hidden = !arr[i];
-        ['cam', 'gal'].forEach(function (k) {
-          $('#sh-s' + i + '-' + k).addEventListener('change', function (e) {
-            var file = e.target.files[0]; e.target.value = ''; if (!file) return;
-            var url = URL.createObjectURL(file);
-            loadImg(url).then(function (img) { URL.revokeObjectURL(url); if (!img) { toast('No se pudo abrir esa imagen'); return; } arr[i] = img; rm.hidden = false; draw(); });
-          });
-        });
-        rm.addEventListener('click', function () { arr[i] = null; rm.hidden = true; draw(); });
-      });
-    }
-    function setLayout(l) {
-      st.layout = l;
-      if (l !== 'std' && st.format !== 'story') { st.format = 'story'; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x.dataset.fmt === 'story'); }); }
-      $$('[data-lay]').forEach(function (x) { x.classList.toggle('on', x.dataset.lay === l); });
-      buildSlots(); var vb = $('#sh-vid-box'); if (vb) vb.hidden = l !== 'std' || !st.video; draw();
-    }
-    $$('[data-lay]').forEach(function (b) { b.addEventListener('click', function () { setLayout(b.dataset.lay); }); });
-    if (isRun) $('#sh-lay').hidden = true;
-    loadImg(logoSrc()).then(function (img) { if (img && !Store.settings().logo) img.__round = true; st.logo = img; draw(); });
-    draw();
-    function wirePhoto(id, key) {
-      function pick(file) {
-        if (!file) return;
-        var url = URL.createObjectURL(file);
-        loadImg(url).then(function (img) {
-          URL.revokeObjectURL(url);
-          if (!img) { toast('No se pudo abrir esa imagen'); return; }
-          st[key] = img; $('#' + id + '-rm').hidden = false; draw();
-        });
-      }
-      ['cam', 'gal'].forEach(function (k) { var el = $('#' + id + '-' + k); el.addEventListener('change', function (e) { pick(e.target.files[0]); e.target.value = ''; }); });
-      $('#' + id + '-rm').addEventListener('click', function () { st[key] = null; this.hidden = true; draw(); });
-    }
-    wirePhoto('sh-bg', 'photo'); wirePhoto('sh-bd', 'board');
-    /* Vídeo de fondo o frontal (solo uno a la vez): la vista previa usa su primer fotograma; al guardar/compartir se graba con la tarjeta */
-    var vurl = null, busy = false;
-    function hideVid() { ['sh-vb-rm', 'sh-vf-rm'].forEach(function (i) { var e = $('#' + i); if (e) e.hidden = true; }); var b = $('#sh-vid-box'); if (b) b.hidden = true; }
-    function clearVideo() { if (vurl) { URL.revokeObjectURL(vurl); vurl = null; } if (st.video) { st.video.pause(); st.video.removeAttribute('src'); if (st[st.vkey] === st.video) st[st.vkey] = null; st.video = null; } st.vkey = null; }
-    if (VS) {
-      var pickVideo = function (file, key, id) {
-        if (!file) return;
-        clearVideo(); hideVid();
-        var v = document.createElement('video'); v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.muted = true;
-        vurl = URL.createObjectURL(file);
-        v.onerror = function () { clearVideo(); toast('No se pudo abrir ese vídeo'); };
-        v.onloadeddata = function () {
-          if (!(v.duration > 0)) { clearVideo(); toast('No se pudo abrir ese vídeo'); return; }
-          v.onseeked = function () { v.onseeked = null; st.video = v; st.vkey = key; st[key] = v; $('#' + id + '-rm').hidden = false; $('#sh-vid-box').hidden = st.layout !== 'std'; draw();
-            var np = window.Share.partsOf(v); if (np > 1) toast('El vídeo dura ' + Math.round(v.duration) + ' s: se grabará en ' + np + ' partes de 60 s (límite de Instagram)'); };
-          try { v.currentTime = Math.min(0.2, v.duration / 2); } catch (e) {}
-        };
-        v.src = vurl;
-      };
-      [['sh-vb', 'photo', 'sh-bg'], ['sh-vf', 'board', 'sh-bd']].forEach(function (c) {
-        ['cam', 'gal'].forEach(function (k) { $('#' + c[0] + '-' + k).addEventListener('change', function (e) { pickVideo(e.target.files[0], c[1], c[0]); e.target.value = ''; }); });
-        $('#' + c[0] + '-rm').addEventListener('click', function () { clearVideo(); hideVid(); draw(); });
-        var drop = function () { if (st.video && st.vkey === c[1]) { clearVideo(); hideVid(); } };
-        $('#' + c[2] + '-rm').addEventListener('click', drop);
-        ['cam', 'gal'].forEach(function (k) { $('#' + c[2] + '-' + k).addEventListener('change', drop, true); });
-      });
-      var makeVideo = function (what) {
-        if (busy || !st.video) return;
-        busy = true; var box = $('#sh-vprog'); box.hidden = false; $('#sh-vbar').style.width = '0%'; $('#sh-vtxt').textContent = 'Grabando… no cierres la pantalla';
-        $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = true; });
-        var o = opts(); if (st.vkey === 'photo') o.photo = null;
-        window.Share.recordVideoParts(o, st.video, { role: st.vkey, onProgress: function (p, i, n) { $('#sh-vbar').style.width = Math.round(p * 100) + '%'; $('#sh-vtxt').textContent = n > 1 ? 'Grabando parte ' + i + ' de ' + n + '… no cierres la pantalla' : 'Grabando… no cierres la pantalla'; } })
-          .then(function (v) {
-            $('#sh-vtxt').textContent = what === 'share' ? 'Abriendo compartir…' : 'Guardando…';
-            return (what === 'share' ? window.Share.shareVideo(v, text() + ' #4TIMER') : window.Share.saveVideo(v)).then(function (r) {
-              if (what === 'save') toast(r === 'gallery' ? 'Vídeo guardado en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar el vídeo. Prueba con «Compartir vídeo»' : 'Vídeo descargado en la carpeta de descargas');
-              else if (r === 'saved') toast('Vídeo descargado. Ya puedes subirlo a Instagram');
-              else if (r === 'error') toast('No se pudo compartir el vídeo');
-            });
-          })
-          .catch(function () { toast('No se pudo grabar el vídeo en este móvil'); })
-          .then(function () { busy = false; box.hidden = true; $$('#sh-vid-box .btn').forEach(function (b) { b.disabled = false; }); if (st.video) { try { st.video.pause(); st.video.currentTime = Math.min(0.2, st.video.duration / 2); } catch (e) {} } });
-      };
-      $('#sh-vshare').addEventListener('click', function () { makeVideo('share'); });
-      $('#sh-vsave').addEventListener('click', function () { makeVideo('save'); });
-      cleanup = function () { clearVideo(); };
-    }
-    $('#sh-ex').addEventListener('change', function () { st.showEx = this.checked; draw(); });
-    $('#sh-t').addEventListener('change', function () { st.showT = this.checked; draw(); });
-    $('#sh-s').addEventListener('change', function () { st.showS = this.checked; draw(); });
-    $('#sh-top').addEventListener('change', function () { st.exTop = this.checked; draw(); });
-    $$('[data-fmt]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        st.format = b.dataset.fmt;
-        if (st.format !== 'story' && st.layout !== 'std') { st.layout = 'std'; $$('[data-lay]').forEach(function (x) { x.classList.toggle('on', x.dataset.lay === 'std'); }); buildSlots(); }
-        $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === b); });
-        draw();
-      });
-    });
-    $$('[data-sty]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        st.style = b.dataset.sty;
-        $$('[data-sty]').forEach(function (x) { x.classList.toggle('on', x === b); });
-        draw();
-      });
-    });
+    function text() { if (isRun) return window.RunUI.shareText(res); return res.kind === 'rounds' ? res.value + ' rondas · ' + res.name : res.kind === 'time' ? res.name + ' · ' + T.fmt(res.value) : res.name; }
+    if (manual) model();
+    var ed = window.ShareUI.mount($('#sh-ed'), { model: model, text: text, isRun: isRun, gymName: s.gymName || '4TIME Hybrid & Functional Center', logoSrc: logoSrc(), logoRound: !s.logo });
+    cleanup = function () { ed.destroy(); };
+    if (isRun) $('#sh-priv').addEventListener('change', function () { st.hide = this.checked; ed.refresh(); });
     if (manual) {
       $$('[data-mt]').forEach(function (b) {
         b.addEventListener('click', function () {
           st.type = b.dataset.mt;
           $$('[data-mt]').forEach(function (x) { x.classList.toggle('on', x === b); });
           $$('.m-box').forEach(function (x) { x.hidden = x.dataset.for !== st.type; });
-          draw();
+          ed.refresh();
         });
       });
-      $$('.card-form input, .card-form textarea').forEach(function (el) { el.addEventListener('input', draw); });
-    }
-    if (manual) $('#sh-hist').addEventListener('click', function () {
-      var r = buildManual();
-      if (!($('#m-name').value || '').trim()) { toast('Ponle un nombre al entreno para guardarlo'); $('#m-name').focus(); return; }
-      var rec = Store.addResult(r); toast(rec.pr ? '¡Nueva marca personal!' : 'Guardado en el historial');
-      if (rec.pr) { res = rec; draw(); }
-    });
-    function text() { if (isRun) return window.RunUI.shareText(res); return res.kind === 'rounds' ? res.value + ' rondas · ' + res.name : res.kind === 'time' ? res.name + ' · ' + T.fmt(res.value) : res.name; }
-    $('#sh-share').addEventListener('click', function () {
-      draw(true).then(function () { return window.Share.share(canvas, text() + ' #4TIMER'); }).then(function (r) {
-        draw();
-        if (r === 'saved') toast('Imagen guardada. Ya puedes subirla a Instagram');
-        else if (r === 'error') toast('No se pudo compartir');
+      $$('.card-form input, .card-form textarea').forEach(function (el) { el.addEventListener('input', function () { ed.refresh(); }); });
+      $('#sh-hist').addEventListener('click', function () {
+        var r = buildManual();
+        if (!($('#m-name').value || '').trim()) { toast('Ponle un nombre al entreno para guardarlo'); $('#m-name').focus(); return; }
+        var rec = Store.addResult(r); toast(rec.pr ? '¡Nueva marca personal!' : 'Guardado en el historial');
+        if (rec.pr) { res = rec; ed.refresh(); }
       });
-    });
-    $('#sh-save').addEventListener('click', function () { draw(true).then(function () { return window.Share.save(canvas); }).then(function (r) { draw(); toast(r === 'gallery' ? 'Imagen guardada en la galería (álbum 4TIMER)' : r === 'error' ? 'No se pudo guardar. Prueba con «Compartir»' : 'Imagen descargada en la carpeta de descargas'); }); });
+    }
   }
 
   /* ---------- Historial ---------- */

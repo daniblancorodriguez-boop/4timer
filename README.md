@@ -121,3 +121,14 @@ En la pantalla de compartir hay dos casillas: **Mostrar el cartel del modo y el 
 
 ### Foto / vídeo frontal y de fondo
 La pantalla de compartir tiene **Foto de fondo**, **Vídeo de fondo**, **Foto frontal** y **Vídeo frontal**. El frontal va enmarcado delante (donde antes estaba la «foto de la pizarra») y el de fondo ocupa toda la tarjeta. Se puede combinar foto de fondo + vídeo frontal, o vídeo de fondo + foto frontal. Solo un vídeo a la vez.
+
+
+### Editor de la tarjeta para compartir
+La pantalla de compartir es ahora un editor sobre la propia tarjeta:
+- **Stories / Publicación** arriba y, justo debajo, la **ruleta de plantillas** (Clásica, Foto frontal, Ejercicios arriba, Solo resultado, Carrete 3 + fondo, Carrete 4 + 2 fondos, Collage 3 + fondo). Se cambia tocando la miniatura o **deslizando el fondo** de la tarjeta a izquierda/derecha. Al cambiar, las fotos y vídeos ya cargados pasan a los huecos de la nueva plantilla.
+- **Toca un recuadro** (marcador, nombre, ejercicios, logo, pie, fotos…) para seleccionarlo: se **arrastra**, se **redimensiona** con el tirador naranja de la esquina inferior derecha y la barra inferior permite **Delante / Detrás** (capas), **tamaño ±**, **girar**, **3 estilos** por elemento (p. ej. marcador: Marcador / Cristal / Solo cifras; foto: Recto / Redondeado / Polaroid) y **Eliminar**.
+- Cada hueco con **+** acepta **foto o vídeo**, con **cámara** (foto o vídeo) o **galería**. «Poner de fondo» lo extiende a toda la tarjeta; «Liberar fondo» lo permite mover.
+- **Añadir** vuelve a poner cualquier elemento eliminado o crea más recuadros de foto/vídeo.
+- Con varios vídeos en la tarjeta se graban a la vez; el más largo marca la duración (partes de 60 s) y el audio.
+- En carreras, el recorrido es otro elemento (estilo Línea o Mapa real).
+- Sustituye a las casillas anteriores (Mostrar ejercicios, cartel, marcador…): ahora se quita el elemento. El formato horizontal 16:9 se ha retirado.

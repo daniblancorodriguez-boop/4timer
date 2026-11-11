@@ -11,7 +11,7 @@ const www = path.join(__dirname, '..', 'www');
   let promptVal = null; w.prompt = () => promptVal;
   let offset = 0; const realNow = w.performance.now.bind(w.performance);
   Object.defineProperty(w, 'performance', { value: { now: () => realNow() + offset }, configurable: true });
-  for (const f of ['timer', 'exercises', 'store', 'audio', 'led', 'map', 'share', 'run', 'runui', 'app']) w.eval(fs.readFileSync(path.join(www, 'js', f + '.js'), 'utf8'));
+  for (const f of ['timer', 'exercises', 'store', 'audio', 'led', 'map', 'share', 'shareui', 'run', 'runui', 'app']) w.eval(fs.readFileSync(path.join(www, 'js', f + '.js'), 'utf8'));
   const $ = s => w.document.querySelector(s), $$ = s => [...w.document.querySelectorAll(s)];
   const click = el => { assert.ok(el, 'falta el elemento a pulsar'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); };
   const change = (el, v) => { el.value = v; el.dispatchEvent(new w.Event('change', { bubbles: true })); };
@@ -58,7 +58,7 @@ const www = path.join(__dirname, '..', 'www');
   console.log('Carrera libre OK', h.distance, h.sec);
 
   // ---- tarjeta de compartir: privacidad ----
-  const calls = []; w.Share.render = (c, o) => { calls.push(o); return Promise.resolve(); };
+  const calls = []; w.Share.render = (c, o) => { calls.push(o); return Promise.resolve(); }; w.Share.renderThumb = () => Promise.resolve();
   click($('#rs-share')); await tick(120);
   assert.strictEqual(w.location.hash, '#/share');
   assert.ok($('#sh-priv') && $('#sh-priv').checked, 'privacidad activada por defecto');

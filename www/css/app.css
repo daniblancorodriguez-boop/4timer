@@ -385,3 +385,20 @@ svg { overflow: visible; }
 .vprog { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 21px; color: var(--muted, #aaa); }
 .vbar { height: 12px; border-radius: 6px; background: var(--panel-2); overflow: hidden; }
 .vbar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .2s linear; }
+
+/* ---------- Editor de compartir ---------- */
+.tpl-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; margin: 0 -2px 8px; -webkit-overflow-scrolling: touch; }
+.tpl { flex: 0 0 auto; scroll-snap-align: center; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 6px 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+.tpl canvas { display: block; width: 84px; height: auto; border-radius: 6px; background: #050506; }
+.tpl.on { border-color: var(--orange); color: var(--chalk); }
+.ed-prev canvas { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; max-height: 64dvh; }
+.ed-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.ed-bar[hidden], .ed-bar [hidden] { display: none; }
+.ed-sel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 22px; }
+.ed-x { color: var(--muted); cursor: pointer; font-size: 19px; padding: 6px 4px; }
+.ed-ops { display: flex; flex-wrap: wrap; gap: 8px; }
+.ed-ops .btn { flex: 1 1 30%; min-width: 0; }
+.ed-bar .seg-ctl .btn.on { background: var(--orange); color: #1b1203; border-color: var(--orange); }
+.ed-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ed-add-l { color: var(--muted); font-size: 19px; flex: 1 0 100%; }
+.ed-add .btn { flex: 0 1 auto; }

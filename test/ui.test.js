@@ -19,7 +19,7 @@ const www = path.join(__dirname, '..', 'www');
   // Reloj controlable: avanzar minutos sin esperar
   let offset = 0; const realNow = w.performance.now.bind(w.performance);
   Object.defineProperty(w, 'performance', { value: { now: () => realNow() + offset }, configurable: true });
-  for (const f of ['timer', 'exercises', 'store', 'audio', 'led', 'map', 'share', 'run', 'runui', 'app']) w.eval(fs.readFileSync(path.join(www, 'js', f + '.js'), 'utf8'));
+  for (const f of ['timer', 'exercises', 'store', 'audio', 'led', 'map', 'share', 'shareui', 'run', 'runui', 'app']) w.eval(fs.readFileSync(path.join(www, 'js', f + '.js'), 'utf8'));
 
   const $ = s => w.document.querySelector(s);
   const $$ = s => [...w.document.querySelectorAll(s)];
@@ -190,7 +190,7 @@ const www = path.join(__dirname, '..', 'www');
 
   // ---- Compartir: AMRAP (rondas) y For Time (tiempo) ----
   const calls = [];
-  w.Share.render = (cv, o) => { calls.push(o); return Promise.resolve(cv); };
+  w.Share.render = (cv, o) => { calls.push(o); return Promise.resolve(cv); }; w.Share.renderThumb = () => Promise.resolve();
   await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80);   // AMRAP 20'
   click($('#plus')); click($('#plus')); click($('#plus')); await tick(80);
   assert.ok(/Pausa/.test($('#pause').textContent));
@@ -201,10 +201,27 @@ const www = path.join(__dirname, '..', 'www');
   let o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'rounds'); assert.strictEqual(o.r.value, 3); assert.strictEqual(o.r.sub, 'en 20:00');
   assert.strictEqual(o.r.lines.length, 5); assert.strictEqual(o.r.lines[0].parts[0].name, 'American swing'); assert.strictEqual(o.r.lines[0].parts[0].qty, '15');
-  assert.strictEqual(o.format, 'story'); assert.strictEqual(o.showExercises, true);
+  assert.strictEqual(o.format, 'story'); assert.ok(o.elements.some(e => e.type === 'exercises') && o.elements.some(e => e.type === 'stat'), 'plantilla con marcador y ejercicios');
+  assert.strictEqual($$('.tpl').length, w.Share.TEMPLATES.length, 'ruleta con todas las plantillas');
   click($('[data-fmt="post"]')); await tick(20); assert.strictEqual(calls[calls.length - 1].format, 'post');
-  $('#sh-ex').checked = false; $('#sh-ex').dispatchEvent(new w.Event('change', { bubbles: true })); await tick(20);
-  assert.strictEqual(calls[calls.length - 1].showExercises, false);
+  click($('.tpl[data-tpl="1"]')); await tick(20);
+  o = calls[calls.length - 1]; assert.strictEqual(o.tpl, 1); assert.ok(o.elements.filter(e => e.type === 'media').length >= 2, 'la plantilla «Foto frontal» tiene fondo y foto frontal');
+  // editar sobre la tarjeta: tocar el marcador lo selecciona y se puede eliminar
+  const cv = $('#sh-canvas'); cv.getBoundingClientRect = () => ({ left: 0, top: 0, width: 540, height: 960 });
+  const ptr = (t, x, y) => cv.dispatchEvent(new w.MouseEvent(t, { clientX: x, clientY: y, bubbles: true }));
+  ptr('pointerdown', 270, 580); ptr('pointerup', 270, 580); await tick(20);
+  assert.ok(!$('#ed-bar').hidden && $('#ed-name').textContent === 'Marcador', 'tocar el marcador lo selecciona: ' + $('#ed-name').textContent);
+  ptr('pointerdown', 270, 580); ptr('pointermove', 270, 480); ptr('pointerup', 270, 480); await tick(20);
+  assert.ok(calls[calls.length - 1].elements.find(e => e.type === 'stat').y < 0.45, 'arrastrar mueve el elemento');
+  click($('[data-est="1"]')); assert.strictEqual(calls[calls.length - 1].elements.find(e => e.type === 'stat').style, 1);
+  click($('[data-op="del"]')); await tick(10);
+  assert.ok(!calls[calls.length - 1].elements.some(e => e.type === 'stat') && $('#ed-bar').hidden, 'eliminado');
+  assert.ok($('[data-add="stat"]'), 'se puede volver a añadir'); click($('[data-add="stat"]')); await tick(10); assert.ok(calls[calls.length - 1].elements.some(e => e.type === 'stat'));
+  // el + abre cámara / galería
+  click($('[data-add="media"]')); await tick(10); assert.ok($('#md-sheet') && $$('#md-sheet input[type=file]').length >= 2, 'hoja de cámara / galería'); click($('#md-cancel')); assert.ok(!$('#md-sheet'));
+  // deslizar sobre el fondo cambia de plantilla
+  ptr('pointerdown', 20, 500); ptr('pointermove', 5, 500); ptr('pointermove', 0, 500); ptr('pointerup', 0, 500);
+  ptr('pointerdown', 500, 40); ptr('pointermove', 100, 40); ptr('pointerup', 100, 40); await tick(20);
   click($('.top [data-nav]')); await tick(40); assert.ok(!$('.run'), 'volver no reinicia el reloj');
 
   await go('#/'); await go('#/presets/partners'); click($('[data-prun="p3"]')); await tick(80);   // For Time
@@ -224,7 +241,7 @@ const www = path.join(__dirname, '..', 'www');
 
   // ---- Compartir entreno sin haber usado la app ----
   await go('#/'); click($$('.card').find(c => /Compartir entreno/.test(c.textContent))); await tick(40);
-  assert.strictEqual(w.location.hash, '#/share/new'); assert.ok($('#m-text') && $('#sh-bg-gal') && $('#sh-bd-cam'));
+  assert.strictEqual(w.location.hash, '#/share/new'); assert.ok($('#m-text') && $('#sh-canvas') && $('#ed-tpl') && $('#ed-fmt'));
   input($('#m-min'), '12'); input($('#m-sec'), '34'); input($('#m-text'), 'Thrusters\n\nPull ups'); await tick(10);
   o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'time'); assert.strictEqual(o.r.value, 754); assert.strictEqual(o.r.lines.length, 2); assert.strictEqual(o.r.modeName, 'FOR TIME');
@@ -264,9 +281,9 @@ const www = path.join(__dirname, '..', 'www');
   console.log('Historial OK');
   // plantillas: horizontal y logo grande
   await go('#/share/new'); await tick(30);
-  click($('[data-fmt="land"]')); click($('[data-sty="logo"]')); await tick(20);
-  o = calls[calls.length - 1]; assert.strictEqual(o.format, 'land'); assert.strictEqual(o.style, 'logo');
-  click($('[data-sty="std"]')); await tick(10); assert.strictEqual(calls[calls.length - 1].style, 'std');
+  click($('[data-fmt="post"]')); click($('.tpl[data-tpl="5"]')); await tick(20);
+  o = calls[calls.length - 1]; assert.strictEqual(o.format, 'post'); assert.strictEqual(o.tpl, 5);
+  assert.strictEqual(o.elements.filter(e => e.type === 'media' && e.fixed).length, 2, 'Carrete 4 + 2 fondos');
   // guardar manual en el historial exige nombre
   const nH = w.Store.history().length; click($('#sh-hist')); await tick(10); assert.strictEqual(w.Store.history().length, nH, 'sin nombre no guarda');
   input($('#m-name'), 'Murph'); input($('#m-min'), '45'); click($('#sh-hist')); await tick(10); assert.strictEqual(w.Store.history().length, nH + 1);
