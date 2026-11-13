@@ -15,18 +15,8 @@
       '<div class="seg-ctl" id="ed-fmt" role="group" aria-label="Tamaño"><button class="btn small on" data-fmt="story">Stories 9:16</button><button class="btn small" data-fmt="post">Publicación 4:5</button></div>' +
       '<div class="tpl-strip" id="ed-tpl" role="listbox" aria-label="Plantillas">' +
       S.TEMPLATES.map(function (t, i) { return '<button class="tpl' + (i === 0 ? ' on' : '') + '" data-tpl="' + i + '" role="option"><canvas></canvas><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
-      '<div class="share-prev ed-prev"><canvas id="sh-canvas" aria-label="Vista previa editable de la imagen para compartir"></canvas></div>' +
-      '<p class="hint" id="ed-hint">Toca un recuadro para editarlo y arrástralo. Desliza el fondo a la izquierda para cambiar de plantilla.</p>' +
-      '<div class="ed-bar" id="ed-bar" hidden>' +
-      '<div class="ed-sel"><b id="ed-name"></b><span id="ed-deselect" class="ed-x" role="button" tabindex="0">Cerrar ✕</span></div>' +
-      '<div class="seg-ctl" id="ed-styles" role="group" aria-label="Estilo"></div>' +
-      '<div class="ed-ops">' +
-      '<button class="btn small" data-op="up">Delante</button><button class="btn small" data-op="down">Detrás</button>' +
-      '<button class="btn small" data-op="smaller">Más pequeño</button><button class="btn small" data-op="bigger">Más grande</button>' +
-      '<button class="btn small" data-op="rotl">Girar ↺</button><button class="btn small" data-op="rotr">Girar ↻</button>' +
-      '<button class="btn small" data-op="src" data-media>Cambiar foto / vídeo</button><button class="btn small" data-op="clear" data-media>Vaciar</button>' +
-      '<button class="btn small" data-op="fill" data-media>Poner de fondo</button><button class="btn small" data-op="free" data-fixed>Liberar fondo</button>' +
-      '<button class="btn small danger" data-op="del">Eliminar</button></div></div>' +
+      '<div class="share-prev ed-prev"><canvas id="sh-canvas" aria-label="Vista previa editable de la imagen para compartir"></canvas><div class="ed-float" id="ed-float" hidden></div></div>' +
+      '<p class="hint" id="ed-hint">Toca un recuadro: le salen sus herramientas (estilo, capa, girar, tamaño…). Arrástralo para moverlo. Desliza el fondo para cambiar de plantilla.</p>' +
       '<div class="ed-add" id="ed-add"></div>' +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
       '<button class="btn block" id="sh-save" style="margin-top:10px">' + ICON.download + 'Guardar imagen</button>' +
@@ -75,18 +65,78 @@
       if (f) { st.format = f.dataset.fmt; st.sc.format = st.format; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === f); }); changed(); }
     });
 
-    /* ---------- barra del elemento seleccionado ---------- */
-    function bar() {
-      var e = selEl(), b = $('#ed-bar'); b.hidden = !e;
-      renderAdd();
-      if (!e) return;
-      var styles = S.STYLES[e.type] || [], box = $('#ed-styles');
-      $('#ed-name').textContent = S.TYPE_LABEL[e.type] + (e.label && e.type === 'media' ? ' · ' + e.label : '');
-      box.hidden = !styles.length;
-      box.innerHTML = styles.map(function (n, i) { return '<button class="btn small' + (i === (e.style | 0) ? ' on' : '') + '" data-est="' + i + '">' + n + '</button>'; }).join('');
-      $$('#ed-bar [data-media]').forEach(function (x) { x.hidden = e.type !== 'media' || (x.dataset.op === 'clear' && !e.media) || (x.dataset.op === 'fill' && e.fixed && e.w > 0.99); });
-      $$('#ed-bar [data-fixed]').forEach(function (x) { x.hidden = !(e.type === 'media' && e.fixed); });
+    /* ---------- herramientas flotantes alrededor del elemento seleccionado ---------- */
+    var SVG = function (d) { return '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
+    var FI = {
+      style: SVG('<path d="M12 3a9 9 0 100 18c1.5 0 2-1 1.5-2s0-2 1.5-2H17a4 4 0 004-4 9 9 0 00-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
+      layer: SVG('<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>'),
+      rot: SVG('<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 4v5h-5"/>'),
+      size: SVG('<path d="M4 14v6h6"/><path d="M20 10V4h-6"/><path d="M4 20l7-7"/><path d="M20 4l-7 7"/>'),
+      more: SVG('<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'),
+      del: SVG('<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>')
+    };
+    function floatTools(e) {
+      var t = [], styles = S.STYLES[e.type] || [];
+      if (!e.fixed && styles.length) t.push(['style', 'Estilo', FI.style]);
+      t.push(['layer', 'Capa', FI.layer]);
+      if (!e.fixed) t.push(['rot', 'Girar', FI.rot], ['size', 'Tamaño', FI.size]);
+      if (e.type === 'media') { t.push(['src', 'Cambiar foto o vídeo', ICON.camera]); t.push(['more', 'Más', FI.more]); }
+      t.push(['del', 'Eliminar', FI.del]);
+      return t;
     }
+    function bubbleHtml(e, key) {
+      var B = function (attr, label, on) { return '<button class="fl-b' + (on ? ' on' : '') + '" ' + attr + '>' + label + '</button>'; };
+      if (key === 'style') return (S.STYLES[e.type] || []).map(function (n, i) { return B('data-est="' + i + '"', n, i === (e.style | 0)); }).join('');
+      if (key === 'layer') return B('data-op="up"', 'Poner delante') + B('data-op="down"', 'Poner detrás');
+      if (key === 'rot') return B('data-op="rotl"', '↺ Izquierda') + B('data-op="rotr"', 'Derecha ↻');
+      if (key === 'size') return B('data-op="smaller"', '− Menos') + B('data-op="bigger"', '+ Más');
+      if (key === 'more') return (e.media ? B('data-op="clear"', 'Vaciar') : '') + (e.fixed ? B('data-op="free"', 'Liberar fondo') : B('data-op="fill"', 'Poner de fondo'));
+      return '';
+    }
+    function bbox(e, fm, k) {                                        // caja que ocupa el elemento (con giro) en px de pantalla, relativa al lienzo
+      var cx = (e.x + e.w / 2) * fm.w, cy = (e.y + e.h / 2) * fm.h, hw = e.w * fm.w / 2, hh = e.h * fm.h / 2, c = Math.cos(e.rot || 0), sn = Math.sin(e.rot || 0), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].forEach(function (p) { var X = cx + p[0] * c - p[1] * sn, Y = cy + p[0] * sn + p[1] * c; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); });
+      return { x0: x0 * k, y0: y0 * k, x1: x1 * k, y1: y1 * k };
+    }
+    function placeFloat() {
+      var e = selEl(), fl = $('#ed-float');
+      if (!e || drag) { fl.hidden = true; return; }
+      var tools = floatTools(e), N = tools.length, SZ = 44, G = 6, len = N * SZ + (N - 1) * G;
+      fl.setAttribute('data-type', e.type); fl.hidden = false;
+      var strip = '<div class="fl-strip">' + tools.map(function (t) {
+        var dir = t[0] === 'del' || t[0] === 'src';
+        return '<button class="fl-i' + (st.bub === t[0] ? ' on' : '') + '" ' + (dir ? 'data-op="' + t[0] + '"' : 'data-bub="' + t[0] + '"') + ' aria-label="' + t[1] + '" title="' + t[1] + '">' + t[2] + '</button>';
+      }).join('') + '</div>';
+      var bub = st.bub && bubbleHtml(e, st.bub) ? '<div class="fl-bub">' + bubbleHtml(e, st.bub) + '</div>' : '';
+      fl.innerHTML = strip + bub;
+      var wrap = $('.ed-prev'), cb = canvas.getBoundingClientRect(), wb = wrap.getBoundingClientRect(), fm = S.FORMATS[st.sc.format];
+      if (!cb.width) return;
+      var k = cb.width / fm.w, ox = cb.left - wb.left, oy = cb.top - wb.top, bb = bbox(e, fm, k), WW = wb.width, HH = wb.height;
+      var x0 = bb.x0 + ox, x1 = bb.x1 + ox, y0 = bb.y0 + oy, y1 = bb.y1 + oy, cxm = (x0 + x1) / 2, cym = (y0 + y1) / 2, M = 8, OUT = 52;   // las herramientas pueden salirse un poco por arriba/abajo de la tarjeta
+      var cl = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
+      var opts = {
+        right: function () { return x1 + M + SZ <= WW && len <= HH ? { side: 'r', v: 1, l: x1 + M, t: cl(y0, 0, HH - len) } : null; },
+        left: function () { return x0 - M - SZ >= 0 && len <= HH ? { side: 'l', v: 1, l: x0 - M - SZ, t: cl(y0, 0, HH - len) } : null; },
+        above: function () { return y0 - M - SZ >= -OUT && len <= WW ? { side: 'a', v: 0, l: cl(cxm - len / 2, 0, WW - len), t: y0 - M - SZ } : null; },
+        below: function () { return y1 + M + SZ <= HH + OUT && len <= WW ? { side: 'b', v: 0, l: cl(cxm - len / 2, 0, WW - len), t: y1 + M } : null; },
+        inside: function () { return { side: 'i', v: 0, l: cl(cxm - len / 2, 0, Math.max(0, WW - len)), t: cl(y0 + M, 0, Math.max(0, HH - SZ)) }; }
+      };
+      var narrow = (x1 - x0) < cb.width * 0.6, order = e.fixed ? ['inside'] : narrow ? ['right', 'left', 'above', 'below', 'inside'] : ['above', 'below', 'right', 'left', 'inside'], pos = null;
+      var others = st.sc.elements.filter(function (o) { return o !== e && !o.fixed; }).map(function (o) { var q = bbox(o, fm, k); return { x0: q.x0 + ox, y0: q.y0 + oy, x1: q.x1 + ox, y1: q.y1 + oy }; }), best = 1e18;
+      order.forEach(function (nm) {                                  // se elige el lado que menos tapa a otros elementos (a igualdad, el primero de la lista)
+        var c = opts[nm](); if (!c) return;
+        var cw = c.v ? SZ : len, ch = c.v ? len : SZ, ov = 0;
+        others.forEach(function (q) { var w = Math.min(c.l + cw, q.x1) - Math.max(c.l, q.x0), h = Math.min(c.t + ch, q.y1) - Math.max(c.t, q.y0); if (w > 0 && h > 0) ov += w * h; });
+        if (c.side === 'i') ov += 20000;                                // dentro del propio elemento, solo como último recurso
+        if (ov < best - 1) { best = ov; pos = c; }
+      });
+      if (e.fixed) pos.t = cl(cb.height * 0.42 + oy, 0, HH - SZ);
+      fl.className = 'ed-float fs-' + pos.side + (pos.v ? ' fl-v' : ' fl-h');
+      fl.style.left = Math.round(pos.l) + 'px'; fl.style.top = Math.round(pos.t) + 'px';
+      var bEl = fl.querySelector('.fl-bub'), on = fl.querySelector('.fl-i.on');
+      if (bEl && on && pos.v) bEl.style.top = on.offsetTop + 'px';
+    }
+    function bar() { renderAdd(); var cur = st.sel || ''; if (cur !== st.lastSel) { st.bub = null; st.lastSel = cur; } placeFloat(); }
     function renderAdd() {
       var have = {}; st.sc.elements.forEach(function (e) { have[e.type] = true; });
       var types = ['media', 'title', 'stat', 'exercises', 'logo', 'brand', 'footer'].concat(cfg.isRun ? ['route'] : []);
@@ -111,8 +161,8 @@
         if (type === 'media') openSheet(ne);
         return;
       }
-      if (ev.target.closest('#ed-deselect')) { st.sel = null; changed(); return; }
       if (!e) return;
+      if ((t = ev.target.closest('[data-bub]'))) { st.bub = st.bub === t.dataset.bub ? null : t.dataset.bub; placeFloat(); return; }
       if ((t = ev.target.closest('[data-est]'))) { e.style = +t.dataset.est; changed(); return; }
       if (!(t = ev.target.closest('[data-op]'))) return;
       var op = t.dataset.op;
@@ -126,7 +176,6 @@
       else if (op === 'free') e.fixed = false;
       changed(); vidBox();
     });
-    host.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.id === 'ed-deselect') { st.sel = null; changed(); } });
 
     /* ---------- gestos sobre la tarjeta ---------- */
     function pt(ev) {
@@ -145,7 +194,7 @@
       }
       try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
       if (ev.cancelable) ev.preventDefault();
-      draw(); bar();
+      draw(); if (st.sel !== st.lastSel) { st.bub = null; st.lastSel = st.sel || ''; } $('#ed-float').hidden = true;
     });
     canvas.addEventListener('pointermove', function (ev) {
       if (!drag) return;
@@ -164,7 +213,7 @@
       var p = pt(ev);
       if (d.mode === 'swipe') {
         if (Math.abs(d.dx) > 70 * p.px && Math.abs(d.dx) > Math.abs(d.dy) * 1.3) { setTpl(st.tpl + (d.dx < 0 ? 1 : -1)); return; }
-        if (!d.moved) { st.sel = d.el ? d.el.id : null; if (d.el && d.el.type === 'media' && !d.el.media) openSheet(d.el); }
+        if (!d.moved) { st.sel = d.el && st.sel !== d.el.id ? d.el.id : null; if (d.el && d.el.type === 'media' && !d.el.media) openSheet(d.el); }
       } else if (d.mode === 'move' && !d.moved && d.el.type === 'media' && !d.el.media) openSheet(d.el);
       changed();
     }
