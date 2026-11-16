@@ -16,6 +16,8 @@
       '<div class="tpl-strip" id="ed-tpl" role="listbox" aria-label="Plantillas">' +
       S.TEMPLATES.map(function (t, i) { return '<button class="tpl' + (i === 0 ? ' on' : '') + '" data-tpl="' + i + '" role="option"><canvas></canvas><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
       '<div class="share-prev ed-prev"><canvas id="sh-canvas" aria-label="Vista previa editable de la imagen para compartir"></canvas><div class="ed-float" id="ed-float" hidden></div></div>' +
+      '<input type="file" id="md-photo" accept="image/*" capture="environment" hidden>' + (VS ? '<input type="file" id="md-video" accept="video/*" capture="environment" hidden>' : '') +
+      '<input type="file" id="md-gal" accept="' + (VS ? 'image/*,video/*' : 'image/*') + '" hidden>' +
       '<p class="hint" id="ed-hint">Toca un recuadro: le salen sus herramientas (estilo, capa, girar, tamaño…). Arrástralo para moverlo. Desliza el fondo para cambiar de plantilla.</p>' +
       '<div class="ed-add" id="ed-add"></div>' +
       '<button class="btn primary block" id="sh-share">' + ICON.share + 'Compartir</button>' +
@@ -80,7 +82,7 @@
       if (!e.fixed && styles.length) t.push(['style', 'Estilo', FI.style]);
       t.push(['layer', 'Capa', FI.layer]);
       if (!e.fixed) t.push(['rot', 'Girar', FI.rot], ['size', 'Tamaño', FI.size]);
-      if (e.type === 'media') { t.push(['src', 'Cambiar foto o vídeo', ICON.camera]); t.push(['more', 'Más', FI.more]); }
+      if (e.type === 'media') { t.push(['src', e.media ? 'Cambiar foto o vídeo' : 'Añadir foto o vídeo', ICON.camera]); t.push(['more', 'Más', FI.more]); }
       t.push(['del', 'Eliminar', FI.del]);
       return t;
     }
@@ -88,6 +90,7 @@
       var B = function (attr, label, on) { return '<button class="fl-b' + (on ? ' on' : '') + '" ' + attr + '>' + label + '</button>'; };
       if (key === 'style') return (S.STYLES[e.type] || []).map(function (n, i) { return B('data-est="' + i + '"', n, i === (e.style | 0)); }).join('');
       if (key === 'layer') return B('data-op="up"', 'Poner delante') + B('data-op="down"', 'Poner detrás');
+      if (key === 'src') return B('data-pick="photo"', 'Foto') + (VS ? B('data-pick="video"', 'Vídeo') : '') + B('data-pick="gal"', 'Galería');
       if (key === 'rot') return B('data-op="rotl"', '↺ Izquierda') + B('data-op="rotr"', 'Derecha ↻');
       if (key === 'size') return B('data-op="smaller"', '− Menos') + B('data-op="bigger"', '+ Más');
       if (key === 'more') return (e.media ? B('data-op="clear"', 'Vaciar') : '') + (e.fixed ? B('data-op="free"', 'Liberar fondo') : B('data-op="fill"', 'Poner de fondo'));
@@ -104,8 +107,8 @@
       var tools = floatTools(e), N = tools.length, SZ = 44, G = 6, len = N * SZ + (N - 1) * G;
       fl.setAttribute('data-type', e.type); fl.hidden = false;
       var strip = '<div class="fl-strip">' + tools.map(function (t) {
-        var dir = t[0] === 'del' || t[0] === 'src';
-        return '<button class="fl-i' + (st.bub === t[0] ? ' on' : '') + '" ' + (dir ? 'data-op="' + t[0] + '"' : 'data-bub="' + t[0] + '"') + ' aria-label="' + t[1] + '" title="' + t[1] + '">' + t[2] + '</button>';
+        var dir = t[0] === 'del';
+        return '<button class="fl-i' + (st.bub === t[0] ? ' on' : '') + (t[0] === 'src' && !e.media && st.bub !== 'src' ? ' hint' : '') + '" ' + (dir ? 'data-op="' + t[0] + '"' : 'data-bub="' + t[0] + '"') + ' aria-label="' + t[1] + '" title="' + t[1] + '">' + t[2] + '</button>';
       }).join('') + '</div>';
       var bub = st.bub && bubbleHtml(e, st.bub) ? '<div class="fl-bub">' + bubbleHtml(e, st.bub) + '</div>' : '';
       fl.innerHTML = strip + bub;
@@ -130,7 +133,7 @@
         if (c.side === 'i') ov += 20000;                                // dentro del propio elemento, solo como último recurso
         if (ov < best - 1) { best = ov; pos = c; }
       });
-      if (e.fixed) pos.t = cl(cb.height * 0.42 + oy, 0, HH - SZ);
+      if (e.fixed) pos.t = cl(cb.height * 0.3 + oy, 0, HH - SZ);
       fl.className = 'ed-float fs-' + pos.side + (pos.v ? ' fl-v' : ' fl-h');
       fl.style.left = Math.round(pos.l) + 'px'; fl.style.top = Math.round(pos.t) + 'px';
       var bEl = fl.querySelector('.fl-bub'), on = fl.querySelector('.fl-i.on');
@@ -158,10 +161,10 @@
         if (type !== 'media') { var ex = st.sc.elements.filter(function (x) { return x.type === type; })[0]; if (ex) { st.sel = ex.id; changed(); return; } }
         var ne = S.newElement(type, st.sc); if (type === 'media') ne.label = 'Foto o vídeo';
         st.sc.elements.push(ne); st.sel = ne.id; changed();
-        if (type === 'media') openSheet(ne);
         return;
       }
       if (!e) return;
+      if ((t = ev.target.closest('[data-pick]'))) { st.pickId = e.id; st.bub = null; placeFloat(); var inp = $('#md-' + t.dataset.pick); if (inp) inp.click(); return; }
       if ((t = ev.target.closest('[data-bub]'))) { st.bub = st.bub === t.dataset.bub ? null : t.dataset.bub; placeFloat(); return; }
       if ((t = ev.target.closest('[data-est]'))) { e.style = +t.dataset.est; changed(); return; }
       if (!(t = ev.target.closest('[data-op]'))) return;
@@ -170,7 +173,6 @@
       else if (op === 'bigger') scaleBy(e, 1.1); else if (op === 'smaller') scaleBy(e, 1 / 1.1);
       else if (op === 'rotl' || op === 'rotr') { e.rot = (e.rot || 0) + (op === 'rotl' ? -0.05 : 0.05); if (Math.abs(e.rot) < 0.01) e.rot = 0; }
       else if (op === 'del') { dropMedia(e); st.sc.elements.splice(st.sc.elements.indexOf(e), 1); st.sel = null; }
-      else if (op === 'src') { openSheet(e); return; }
       else if (op === 'clear') dropMedia(e);
       else if (op === 'fill') { e.x = 0; e.y = 0; e.w = 1; e.h = 1; e.rot = 0; e.style = 0; e.fixed = true; var a = st.sc.elements; a.splice(a.indexOf(e), 1); a.unshift(e); }
       else if (op === 'free') e.fixed = false;
@@ -213,8 +215,8 @@
       var p = pt(ev);
       if (d.mode === 'swipe') {
         if (Math.abs(d.dx) > 70 * p.px && Math.abs(d.dx) > Math.abs(d.dy) * 1.3) { setTpl(st.tpl + (d.dx < 0 ? 1 : -1)); return; }
-        if (!d.moved) { st.sel = d.el && st.sel !== d.el.id ? d.el.id : null; if (d.el && d.el.type === 'media' && !d.el.media) openSheet(d.el); }
-      } else if (d.mode === 'move' && !d.moved && d.el.type === 'media' && !d.el.media) openSheet(d.el);
+        if (!d.moved) st.sel = d.el && st.sel !== d.el.id ? d.el.id : null;
+      }
       changed();
     }
     canvas.addEventListener('pointerup', function (ev) { endDrag(ev, false); });
@@ -259,19 +261,13 @@
         if (isVid) { var n = S.partsOf(m.el); if (n > 1) k.toast('El vídeo dura ' + Math.round(m.el.duration) + ' s: se grabará en ' + n + ' partes de 60 s (límite de Instagram)'); }
       });
     }
-    function closeSheet() { var s = document.getElementById('md-sheet'); if (s) s.remove(); }
-    function openSheet(e) {
-      closeSheet();
-      var back = document.createElement('div'); back.className = 'sheet-back'; back.id = 'md-sheet';
-      back.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Añadir foto o vídeo"><h2>Añadir foto o vídeo</h2>' +
-        '<label class="btn block">' + ICON.camera + 'Hacer foto<input type="file" accept="image/*" capture="environment" hidden data-md></label>' +
-        (VS ? '<label class="btn block" style="margin-top:10px">' + ICON.camera + 'Grabar vídeo<input type="file" accept="video/*" capture="environment" hidden data-md></label>' : '') +
-        '<label class="btn block" style="margin-top:10px">' + ICON.image + (VS ? 'Galería (foto o vídeo)' : 'Galería') + '<input type="file" accept="' + (VS ? 'image/*,video/*' : 'image/*') + '" hidden data-md></label>' +
-        '<button class="btn block" id="md-cancel" style="margin-top:10px">Cancelar</button></div>';
-      document.body.appendChild(back);
-      back.addEventListener('click', function (ev) { if (ev.target === back || ev.target.closest('#md-cancel')) closeSheet(); });
-      back.addEventListener('change', function (ev) { var f = ev.target.files && ev.target.files[0]; closeSheet(); setMedia(e, f); });
-    }
+    ['md-photo', 'md-video', 'md-gal'].forEach(function (id) {
+      var inp = $('#' + id); if (!inp) return;
+      inp.addEventListener('change', function () {
+        var f = inp.files && inp.files[0], el = st.sc.elements.filter(function (x) { return x.id === st.pickId; })[0]; inp.value = '';
+        if (f && el) setMedia(el, f);
+      });
+    });
 
     /* ---------- exportar ---------- */
     function vidBox() { var b = $('#sh-vid-box'); if (b) b.hidden = !(VS && S.videosOf(st.sc).length); }
@@ -319,7 +315,7 @@
       scene: function () { return st.sc; },
       state: st,
       destroy: function () {
-        dead = true; clearTimeout(thumbT); closeSheet();
+        dead = true; clearTimeout(thumbT);
         var all = st.sc.elements.map(function (e) { return e.media; }).concat(st.spare);
         all.forEach(function (m) { if (m && m.kind === 'video') { try { m.el.pause(); } catch (e) {} if (m.url) { try { URL.revokeObjectURL(m.url); } catch (e) {} } } });
       }

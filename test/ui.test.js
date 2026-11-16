@@ -222,7 +222,8 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok(!calls[calls.length - 1].elements.some(e => e.type === 'stat') && $('#ed-float').hidden, 'eliminado');
   assert.ok($('[data-add="stat"]'), 'se puede volver a añadir'); click($('[data-add="stat"]')); await tick(10); assert.ok(calls[calls.length - 1].elements.some(e => e.type === 'stat'));
   // el + abre cámara / galería
-  click($('[data-add="media"]')); await tick(10); assert.ok($('#md-sheet') && $$('#md-sheet input[type=file]').length >= 2, 'hoja de cámara / galería'); click($('#md-cancel')); assert.ok(!$('#md-sheet'));
+  click($('[data-add="media"]')); await tick(10); assert.ok(!$('#md-sheet') && $('#ed-float [data-bub="src"]'), 'añadir recuadro: sin hoja, la cámara está en sus herramientas');
+  click($('[data-bub="src"]')); assert.ok($('.fl-bub [data-pick="photo"]') && $('.fl-bub [data-pick="gal"]'), 'burbuja pequeña con foto / galería (2 pasos)');
   // deslizar sobre el fondo cambia de plantilla
   ptr('pointerdown', 20, 500); ptr('pointermove', 5, 500); ptr('pointermove', 0, 500); ptr('pointerup', 0, 500);
   ptr('pointerdown', 500, 40); ptr('pointermove', 100, 40); ptr('pointerup', 100, 40); await tick(20);

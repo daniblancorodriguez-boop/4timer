@@ -422,3 +422,6 @@ svg { overflow: visible; }
 .fs-b .fl-bub { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
 .fl-bub .fl-b { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--chalk); font-size: 20px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
 .fl-bub .fl-b.on, .fl-bub .fl-b:active { background: var(--orange); color: #1b1203; border-color: var(--orange); }
+
+.fl-bub .fl-b { min-height: 40px; padding: 0 12px; font-size: 19px; }
+.fl-i.hint { box-shadow: inset 0 0 0 2px var(--orange); }
