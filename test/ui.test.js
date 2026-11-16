@@ -224,6 +224,13 @@ const www = path.join(__dirname, '..', 'www');
   // el + abre cámara / galería
   click($('[data-add="media"]')); await tick(10); assert.ok(!$('#md-sheet') && $('#ed-float [data-bub="src"]'), 'añadir recuadro: sin hoja, la cámara está en sus herramientas');
   click($('[data-bub="src"]')); assert.ok($('.fl-bub [data-pick="photo"]') && $('.fl-bub [data-pick="gal"]'), 'burbuja pequeña con foto / galería (2 pasos)');
+  // deshacer paso a paso hasta el inicio
+  assert.ok(!$('#ed-undo').disabled, 'hay pasos que deshacer'); let nU = 0; while (!$('#ed-undo').disabled && nU < 200) { click($('#ed-undo')); nU++; } await tick(10);
+  assert.ok(nU >= 5 && $('#ed-undo').disabled, 'deshace hasta el inicio: ' + nU);
+  o = calls[calls.length - 1]; assert.strictEqual(o.tpl, 0, 'vuelve a la plantilla inicial'); assert.ok(o.elements.some(e => e.type === 'stat'));
+  // pulsar fuera de la tarjeta quita la selección
+  ptr('pointerdown', 270, 580); ptr('pointerup', 270, 580); await tick(10); assert.ok(!$('#ed-float').hidden);
+  $('#ed-fmt').dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true })); await tick(10); assert.ok($('#ed-float').hidden, 'tocar fuera deselecciona');
   // deslizar sobre el fondo cambia de plantilla
   ptr('pointerdown', 20, 500); ptr('pointermove', 5, 500); ptr('pointermove', 0, 500); ptr('pointerup', 0, 500);
   ptr('pointerdown', 500, 40); ptr('pointermove', 100, 40); ptr('pointerup', 100, 40); await tick(20);

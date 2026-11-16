@@ -9,9 +9,10 @@
     var S = root.Share, k = K(), ICON = k.ICON, VS = S.videoSupported();
     function $(s) { return k.$(s, host); }
     function $$(s) { return k.$$(s, host); }
-    var st = { format: 'story', tpl: 0, sc: null, sel: null, spare: [], busy: false, logo: null }, seq = 0, drag = null, thumbT = 0, dead = false;
+    var st = { format: 'story', tpl: 0, sc: null, sel: null, spare: [], busy: false, logo: null, hist: [], urls: [] }, seq = 0, drag = null, thumbT = 0, dead = false;
 
     host.innerHTML =
+      '<div class="ed-top"><button class="btn small" id="ed-undo" disabled aria-label="Deshacer">↶ Deshacer</button></div>' +
       '<div class="seg-ctl" id="ed-fmt" role="group" aria-label="Tamaño"><button class="btn small on" data-fmt="story">Stories 9:16</button><button class="btn small" data-fmt="post">Publicación 4:5</button></div>' +
       '<div class="tpl-strip" id="ed-tpl" role="listbox" aria-label="Plantillas">' +
       S.TEMPLATES.map(function (t, i) { return '<button class="tpl' + (i === 0 ? ' on' : '') + '" data-tpl="' + i + '" role="option"><canvas></canvas><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
@@ -34,6 +35,17 @@
     function data(pool) { return { r: cfg.model(), logo: st.logo, gymName: cfg.gymName, isRun: !!cfg.isRun, pool: pool || [] }; }
     function build(i, pool) { var sc = S.makeScene(i, st.format, data(pool)); st.spare = sc.spare || []; return sc; }
     st.sc = build(0, []);
+    /* ---------- deshacer: historial de estados hasta el inicio ---------- */
+    function hsnap() { return { tpl: st.tpl, format: st.format, els: st.sc.elements.map(function (e) { return Object.assign({}, e); }), spare: st.spare.slice() }; }
+    function updateUndo() { var u = $('#ed-undo'); if (u) { u.disabled = !st.hist.length; u.textContent = '↶ Deshacer' + (st.hist.length ? ' (' + st.hist.length + ')' : ''); } }
+    function pushHist(sn) { st.hist.push(sn || hsnap()); if (st.hist.length > 100) st.hist.shift(); updateUndo(); }
+    function undo() {
+      var h = st.hist.pop(); if (!h || st.busy) return;
+      st.tpl = h.tpl; st.format = h.format; st.sc.format = h.format; st.sc.tpl = h.tpl; st.sc.elements = h.els.map(function (e) { return Object.assign({}, e); }); st.spare = h.spare;
+      if (st.sel && !selEl()) st.sel = null;
+      $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x.dataset.fmt === st.format); });
+      markTpl(); updateUndo(); changed(); vidBox();
+    }
     function selEl() { return st.sel ? st.sc.elements.filter(function (e) { return e.id === st.sel; })[0] || null : null; }
 
     function draw(final) {
@@ -57,14 +69,14 @@
       $$('.tpl').forEach(function (b) { var on = +b.dataset.tpl === st.tpl; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on && b.scrollIntoView) { try { b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {} } });
     }
     function setTpl(i) {
-      var n = S.TEMPLATES.length; i = ((i % n) + n) % n;
+      var n = S.TEMPLATES.length; i = ((i % n) + n) % n; if (i === st.tpl) return; pushHist();
       var pool = S.mediaOf(st.sc).concat(st.spare);       // las fotos y vídeos ya cargados pasan a los huecos de la nueva plantilla
       st.tpl = i; st.sc = build(i, pool); st.sel = null; markTpl(); changed(); vidBox();
     }
     host.addEventListener('click', function (e) {
       var t = e.target.closest('.tpl'); if (t) { setTpl(+t.dataset.tpl); return; }
       var f = e.target.closest('[data-fmt]');
-      if (f) { st.format = f.dataset.fmt; st.sc.format = st.format; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === f); }); changed(); }
+      if (f) { if (f.dataset.fmt !== st.format) pushHist(); st.format = f.dataset.fmt; st.sc.format = st.format; $$('[data-fmt]').forEach(function (x) { x.classList.toggle('on', x === f); }); changed(); }
     });
 
     /* ---------- herramientas flotantes alrededor del elemento seleccionado ---------- */
@@ -160,14 +172,15 @@
         var type = t.dataset.add;
         if (type !== 'media') { var ex = st.sc.elements.filter(function (x) { return x.type === type; })[0]; if (ex) { st.sel = ex.id; changed(); return; } }
         var ne = S.newElement(type, st.sc); if (type === 'media') ne.label = 'Foto o vídeo';
-        st.sc.elements.push(ne); st.sel = ne.id; changed();
+        pushHist(); st.sc.elements.push(ne); st.sel = ne.id; changed();
         return;
       }
       if (!e) return;
       if ((t = ev.target.closest('[data-pick]'))) { st.pickId = e.id; st.bub = null; placeFloat(); var inp = $('#md-' + t.dataset.pick); if (inp) inp.click(); return; }
       if ((t = ev.target.closest('[data-bub]'))) { st.bub = st.bub === t.dataset.bub ? null : t.dataset.bub; placeFloat(); return; }
-      if ((t = ev.target.closest('[data-est]'))) { e.style = +t.dataset.est; changed(); return; }
+      if ((t = ev.target.closest('[data-est]'))) { pushHist(); e.style = +t.dataset.est; changed(); return; }
       if (!(t = ev.target.closest('[data-op]'))) return;
+      pushHist();
       var op = t.dataset.op;
       if (op === 'up') move(e, 1); else if (op === 'down') move(e, -1);
       else if (op === 'bigger') scaleBy(e, 1.1); else if (op === 'smaller') scaleBy(e, 1 / 1.1);
@@ -188,10 +201,10 @@
     canvas.addEventListener('pointerdown', function (ev) {
       if (st.busy || (ev.button && ev.button !== 0)) return;
       var p = pt(ev), cur = selEl(), hit = null;
-      if (cur && !cur.fixed && S.handleHit(st.sc, cur, p.x, p.y, 44 * p.px)) drag = { mode: 'resize', el: cur, sx: p.x, sy: p.y, e0: snap(cur), moved: false };
+      if (cur && !cur.fixed && S.handleHit(st.sc, cur, p.x, p.y, 44 * p.px)) drag = { mode: 'resize', el: cur, sx: p.x, sy: p.y, e0: snap(cur), moved: false, pre: hsnap() };
       else {
         hit = S.hitTest(st.sc, p.x, p.y);
-        if (hit && !hit.fixed) { st.sel = hit.id; drag = { mode: 'move', el: hit, sx: p.x, sy: p.y, ox: hit.x, oy: hit.y, moved: false, wasSel: cur === hit }; }
+        if (hit && !hit.fixed) { st.sel = hit.id; drag = { mode: 'move', el: hit, sx: p.x, sy: p.y, ox: hit.x, oy: hit.y, moved: false, wasSel: cur === hit, pre: hsnap() }; }
         else drag = { mode: 'swipe', el: hit, sx: p.x, sy: p.y, dx: 0, dy: 0 };
       }
       try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -201,7 +214,7 @@
     canvas.addEventListener('pointermove', function (ev) {
       if (!drag) return;
       var p = pt(ev), dx = p.x - drag.sx, dy = p.y - drag.sy, fm = p.fm;
-      if (Math.abs(dx) + Math.abs(dy) > 8 * p.px) drag.moved = true;
+      if (Math.abs(dx) + Math.abs(dy) > 8 * p.px) { drag.moved = true; if (drag.pre) { pushHist(drag.pre); drag.pre = null; } }
       if (drag.mode === 'move') {
         var e = drag.el; e.x = Math.max(-e.w / 2, Math.min(1 - e.w / 2, drag.ox + dx / fm.w)); e.y = Math.max(-e.h / 2, Math.min(1 - e.h / 2, drag.oy + dy / fm.h)); draw();
       } else if (drag.mode === 'resize') {
@@ -226,7 +239,7 @@
 
     /* ---------- fotos y vídeos: cámara o galería ---------- */
     function dropMedia(e) {
-      if (e.media) { var m = e.media; if (m.kind === 'video') { try { m.el.pause(); } catch (x) {} } if (m.url) { try { URL.revokeObjectURL(m.url); } catch (x) {} } e.media = null; }
+      if (e.media) { var m = e.media; if (m.kind === 'video') { try { m.el.pause(); } catch (x) {} } e.media = null; }
     }
     function loadImage(file) {
       return new Promise(function (res) {
@@ -257,7 +270,7 @@
       (isVid ? loadVideo(file) : loadImage(file)).then(function (m) {
         if (dead) return;
         if (!m) { k.toast(isVid ? 'No se pudo abrir ese vídeo' : 'No se pudo abrir esa imagen'); return; }
-        dropMedia(e); e.media = m; st.sel = e.id; changed(); vidBox();
+        pushHist(); dropMedia(e); e.media = m; if (m.url) st.urls.push(m.url); st.sel = e.id; changed(); vidBox();
         if (isVid) { var n = S.partsOf(m.el); if (n > 1) k.toast('El vídeo dura ' + Math.round(m.el.duration) + ' s: se grabará en ' + n + ' partes de 60 s (límite de Instagram)'); }
       });
     }
@@ -304,6 +317,16 @@
     $('#sh-vshare').addEventListener('click', function () { makeVideo('share'); });
     $('#sh-vsave').addEventListener('click', function () { makeVideo('save'); });
 
+    $('#ed-undo').addEventListener('click', undo);
+    /* tocar fuera de la tarjeta (y de sus herramientas) quita la selección */
+    function outside(ev) {
+      if (!st.sel || dead) return;
+      var t = ev.target; if (!t || !t.closest) return;
+      if (t.closest('#sh-canvas, #ed-float, [data-add], #ed-undo, #sh-vid-box, #sh-share, #sh-save')) return;
+      st.sel = null; st.bub = null; changed();
+    }
+    document.addEventListener('pointerdown', outside, true);
+
     /* ---------- arranque ---------- */
     var img = new Image();
     img.onload = function () { if (cfg.logoRound) img.__round = true; st.logo = img; changed(); };
@@ -316,8 +339,10 @@
       state: st,
       destroy: function () {
         dead = true; clearTimeout(thumbT);
+        document.removeEventListener('pointerdown', outside, true);
         var all = st.sc.elements.map(function (e) { return e.media; }).concat(st.spare);
-        all.forEach(function (m) { if (m && m.kind === 'video') { try { m.el.pause(); } catch (e) {} if (m.url) { try { URL.revokeObjectURL(m.url); } catch (e) {} } } });
+        all.forEach(function (m) { if (m && m.kind === 'video') { try { m.el.pause(); } catch (e) {} } });
+        st.urls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
       }
     };
   }

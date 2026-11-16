@@ -132,3 +132,5 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 - Con varios vídeos en la tarjeta se graban a la vez; el más largo marca la duración (partes de 60 s) y el audio.
 - En carreras, el recorrido es otro elemento (estilo Línea o Mapa real).
 - Sustituye a las casillas anteriores (Mostrar ejercicios, cartel, marcador…): ahora se quita el elemento. El formato horizontal 16:9 se ha retirado.
+- **Deshacer** (arriba de la tarjeta): vuelve atrás paso a paso hasta el inicio (mover, tamaño, giro, estilo, capas, plantilla, formato, fotos y vídeos, eliminar/añadir). Muestra cuántos pasos hay.
+- Tocar **fuera de la tarjeta** quita la selección.
