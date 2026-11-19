@@ -189,8 +189,11 @@
   function timeline(plan, prepSec, opts) {
     opts = opts || {};
     var out = [], P = prepSec * 1000, r;
-    for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
-    out.push({ ev: 'go', ms: P });
+    if (opts.startSeq && prepSec >= 4) out.push({ ev: 'startseq', ms: P - 3020 });
+    else {
+      for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
+      out.push({ ev: 'go', ms: P });
+    }
     var voice = opts.voice !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {

@@ -133,3 +133,13 @@ console.log('TODOS LOS TESTS OK');
   assert.deepStrictEqual(tl, [7000, 8000, 9000, 67000, 68000, 69000, 127000, 128000, 129000], '3 pitidos cortos en cada cambio y al final');
   console.log('voz mitad/well done OK');
 }
+
+{
+  const Tm = require('../www/js/timer.js');
+  const pl = Tm.buildPlan('emom', { interval: 60, rounds: 2 });
+  const a = Tm.timeline(pl, 10, { beepLast3: true, voice: false, startSeq: true });
+  assert.deepStrictEqual([a[0].ev, a[0].ms], ['startseq', 6980]);
+  assert.ok(!a.some(e => e.ev === 'go'), 'el pitido largo va dentro del archivo');
+  assert.ok(!Tm.timeline(pl, 3, { startSeq: true }).some(e => e.ev === 'startseq'), 'con 3 s se usan los pitidos sueltos');
+  console.log('secuencia de inicio OK');
+}

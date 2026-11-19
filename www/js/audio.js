@@ -77,7 +77,21 @@
     half:     { file: 'audio/half.mp3',     text: 'Mitad del tiempo superada', lang: 'es-ES' },
     welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
   };
+  var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
   var vbuf = {}, speechTimers = [];
+  function playStart(volume, delay) {
+    var c = ensure(); if (!c) return;
+    var when = c.currentTime + (delay || 0), dest = master(c, volume);
+    function fallback() {
+      [0, 1, 2].forEach(function (i) { PRESETS.beep.play(c, dest, when + i); });
+      PRESETS.longbeep.play(c, dest, when + START_LEAD);
+    }
+    if (vbuf.start === undefined) VOICES.start = { file: START };
+    loadVoice(c, 'start').then(function (buf) {
+      if (!buf) return fallback();
+      var s = c.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(Math.max(when, c.currentTime)); track(s);
+    });
+  }
   function robot(c, dest, w, name) {
     var f = name === 'half' ? [520, 440, 520, 660] : [440, 554, 659, 880];
     f.forEach(function (hz, i) { tone(c, dest, { when: w, type: 'square', freq: hz, dur: 0.16, gain: 0.25, start: i * 0.19 }); });
@@ -155,6 +169,7 @@
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();
+      if (event === 'startseq') return playStart(s.volume, 0);
       if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, 0); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
@@ -164,6 +179,7 @@
     schedule: function (event, delaySec) {
       var s = root.Store.settings();
       if (!ensure()) return false;
+      if (event === 'startseq') { playStart(s.volume, Math.max(0, delaySec)); return true; }
       if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
       playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       if (s.vibrate && navigator.vibrate) {
@@ -186,11 +202,12 @@
     prepare: function () {
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
-      loadVoice(c, 'half'); loadVoice(c, 'welldone');
+      VOICES.start = { file: START }; loadVoice(c, 'half'); loadVoice(c, 'welldone'); loadVoice(c, 'start');
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
     },
     preview: function (event) {
       var s = root.Store.settings();
+      if (event === 'startseq') return playStart(s.volume, 0);
       if (VOICES[event]) return playVoice(event, s.volume, 0);
       playSound(s.sounds[event], event, s.volume);
     },

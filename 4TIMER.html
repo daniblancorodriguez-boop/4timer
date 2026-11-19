@@ -638,8 +638,11 @@ svg { overflow: visible; }
   function timeline(plan, prepSec, opts) {
     opts = opts || {};
     var out = [], P = prepSec * 1000, r;
-    for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
-    out.push({ ev: 'go', ms: P });
+    if (opts.startSeq && prepSec >= 4) out.push({ ev: 'startseq', ms: P - 3020 });
+    else {
+      for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
+      out.push({ ev: 'go', ms: P });
+    }
     var voice = opts.voice !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
@@ -1164,7 +1167,21 @@ svg { overflow: visible; }
     half:     { file: 'audio/half.mp3',     text: 'Mitad del tiempo superada', lang: 'es-ES' },
     welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
   };
+  var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
   var vbuf = {}, speechTimers = [];
+  function playStart(volume, delay) {
+    var c = ensure(); if (!c) return;
+    var when = c.currentTime + (delay || 0), dest = master(c, volume);
+    function fallback() {
+      [0, 1, 2].forEach(function (i) { PRESETS.beep.play(c, dest, when + i); });
+      PRESETS.longbeep.play(c, dest, when + START_LEAD);
+    }
+    if (vbuf.start === undefined) VOICES.start = { file: START };
+    loadVoice(c, 'start').then(function (buf) {
+      if (!buf) return fallback();
+      var s = c.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(Math.max(when, c.currentTime)); track(s);
+    });
+  }
   function robot(c, dest, w, name) {
     var f = name === 'half' ? [520, 440, 520, 660] : [440, 554, 659, 880];
     f.forEach(function (hz, i) { tone(c, dest, { when: w, type: 'square', freq: hz, dur: 0.16, gain: 0.25, start: i * 0.19 }); });
@@ -1242,6 +1259,7 @@ svg { overflow: visible; }
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();
+      if (event === 'startseq') return playStart(s.volume, 0);
       if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, 0); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
@@ -1251,6 +1269,7 @@ svg { overflow: visible; }
     schedule: function (event, delaySec) {
       var s = root.Store.settings();
       if (!ensure()) return false;
+      if (event === 'startseq') { playStart(s.volume, Math.max(0, delaySec)); return true; }
       if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
       playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       if (s.vibrate && navigator.vibrate) {
@@ -1273,11 +1292,12 @@ svg { overflow: visible; }
     prepare: function () {
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
-      loadVoice(c, 'half'); loadVoice(c, 'welldone');
+      VOICES.start = { file: START }; loadVoice(c, 'half'); loadVoice(c, 'welldone'); loadVoice(c, 'start');
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
     },
     preview: function (event) {
       var s = root.Store.settings();
+      if (event === 'startseq') return playStart(s.volume, 0);
       if (VOICES[event]) return playVoice(event, s.volume, 0);
       playSound(s.sounds[event], event, s.volume);
     },
@@ -3579,7 +3599,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.8';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.9';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -4234,7 +4254,7 @@ svg { overflow: visible; }
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, voice: settings.voice !== false }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, voice: settings.voice !== false, startSeq: true }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -4558,7 +4578,7 @@ svg { overflow: visible; }
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
       '<label class="switch"><span>Voz: «Mitad del tiempo superada» y «Well done!»</span><input type="checkbox" id="vz"' + (s.voice !== false ? ' checked' : '') + '></label>' +
-      '<div class="row" style="gap:8px;margin:0 0 10px"><button class="btn small" data-test="half">Probar mitad</button><button class="btn small" data-test="welldone">Probar Well done</button></div>' +
+      '<div class="row" style="gap:8px;margin:0 0 10px"><button class="btn small" data-test="half">Probar mitad</button><button class="btn small" data-test="welldone">Probar Well done</button><button class="btn small" data-test="startseq">Probar inicio</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
