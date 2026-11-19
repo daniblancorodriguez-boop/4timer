@@ -83,9 +83,9 @@
   function defaults() {
     return {
       settings: {
-        runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        runAutoPause: false, prep: 10, beepLast3: true, voice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
-          countdown: { preset: 'beep' }, go: { preset: 'horn' }, minute: { preset: 'bell' },
+          countdown: { preset: 'beep' }, go: { preset: 'longbeep' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }
@@ -123,6 +123,7 @@
         var p = JSON.parse(raw);
         d.settings = Object.assign(d.settings, p.settings || {});
         d.settings.sounds = Object.assign(defaults().settings.sounds, (p.settings && p.settings.sounds) || {});
+        if (!d.settings.soundsV2) { d.settings.soundsV2 = true; if (d.settings.sounds.go && d.settings.sounds.go.preset === 'horn') d.settings.sounds.go = { preset: 'longbeep' }; }
         d.configs = p.configs || {};
         if (Array.isArray(p.exercises)) d.exercises = p.exercises;
         if (Array.isArray(p.presets)) { var seeds = seedPresets(); d.presets = p.presets.map(function (x) { return migratePreset(x, seeds); }); }

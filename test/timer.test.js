@@ -103,7 +103,7 @@ console.log('TODOS LOS TESTS OK');
     for (const prep of [0, 2, 10]) {
       const plan = Tm.buildPlan(id, Tm.defaultConfig(id));
       if (plan.kind === 'up') plan.cap = 90;
-      const tl = Tm.timeline(plan, prep, { beepLast3: true });
+      const tl = Tm.timeline(plan, prep, { beepLast3: true, voice: false });
       const ev = []; let prev = null;
       const total = ((plan.total || plan.cap) + prep + 2) * 1000;
       for (let ms = 0; ms <= total; ms += 10) {
@@ -116,4 +116,20 @@ console.log('TODOS LOS TESTS OK');
     }
   }
   console.log('timeline coincide con eventsFor en todos los modos');
+}
+
+// ---- voz: mitad del tiempo y Well done ----
+{
+  const Tm = require('../www/js/timer.js');
+  const names = (id, cfg, prep = 0) => Tm.timeline(Tm.buildPlan(id, cfg), prep, { beepLast3: true }).filter(e => e.ev === 'half' || e.ev === 'welldone');
+  const em = names('emom', { interval: 60, rounds: 4 }, 10);
+  assert.deepStrictEqual(em.filter(e => e.ev === 'half').map(e => e.ms), [40000, 100000, 160000, 220000], 'EMOM: mitad de cada minuto');
+  const am = names('amrap', { dur: 600 });
+  assert.deepStrictEqual(am.map(e => [e.ev, e.ms]), [['half', 300000], ['welldone', 600900]], 'AMRAP: mitad del total y Well done');
+  const ft = Tm.buildPlan('fortime', { cap: 600 });
+  assert.ok(Tm.timeline(ft, 0, { beepLast3: true }).some(e => e.ev === 'half' && e.ms === 300000));
+  assert.ok(!Tm.timeline(Tm.buildPlan('amrap', { dur: 600 }), 0, { voice: false }).some(e => e.ev === 'half' || e.ev === 'welldone'));
+  const tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 2 }), 10, { beepLast3: true }).filter(e => e.ev === 'countdown').map(e => e.ms);
+  assert.deepStrictEqual(tl, [7000, 8000, 9000, 67000, 68000, 69000, 127000, 128000, 129000], '3 pitidos cortos en cada cambio y al final');
+  console.log('voz mitad/well done OK');
 }

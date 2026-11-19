@@ -66,8 +66,50 @@
     long:   { label: 'Tono largo grave (descanso)', play: function (c, d, w) {
       tone(c, d, { when: w, freq: 330, dur: 1.3, gain: 0.55, sustain: true });
     } },
+    longbeep: { label: 'Pitido largo (inicio)', play: function (c, d, w) {
+      tone(c, d, { when: w, freq: 880, dur: 1.0, gain: 0.6, sustain: true });
+    } },
     none:   { label: 'Silencio',      play: function () {} }
   };
+
+  /* Voces: archivos audio/half.mp3 y audio/welldone.mp3 (voz real). Si no están, voz robótica del móvil. */
+  var VOICES = {
+    half:     { file: 'audio/half.mp3',     text: 'Mitad del tiempo superada', lang: 'es-ES' },
+    welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
+  };
+  var vbuf = {}, speechTimers = [];
+  function robot(c, dest, w, name) {
+    var f = name === 'half' ? [520, 440, 520, 660] : [440, 554, 659, 880];
+    f.forEach(function (hz, i) { tone(c, dest, { when: w, type: 'square', freq: hz, dur: 0.16, gain: 0.25, start: i * 0.19 }); });
+  }
+  function speak(name, delay, volume) {
+    var v = VOICES[name], ss = root.speechSynthesis;
+    if (!ss || !root.SpeechSynthesisUtterance) return false;
+    speechTimers.push(setTimeout(function () {
+      try {
+        var u = new root.SpeechSynthesisUtterance(v.text);
+        u.lang = v.lang; u.pitch = 0.4; u.rate = 0.9; u.volume = volume;
+        ss.speak(u);
+      } catch (e) {}
+    }, Math.max(0, delay) * 1000));
+    return true;
+  }
+  function loadVoice(c, name) {
+    if (vbuf[name] !== undefined) return Promise.resolve(vbuf[name]);
+    if (typeof fetch !== 'function') { vbuf[name] = null; return Promise.resolve(null); }
+    return fetch(VOICES[name].file).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(function (ab) { return new Promise(function (res, rej) { c.decodeAudioData(ab, res, rej); }); })
+      .then(function (b) { vbuf[name] = b; return b; })
+      .catch(function () { vbuf[name] = null; return null; });
+  }
+  function playVoice(name, volume, delay) {
+    var c = ensure(); if (!c) return;
+    var when = c.currentTime + (delay || 0), dest = master(c, Math.min(1, volume + 0.15));
+    loadVoice(c, name).then(function (buf) {
+      if (buf) { var s = c.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(Math.max(when, c.currentTime)); track(s); }
+      else if (!speak(name, Math.max(0, when - c.currentTime), volume)) robot(c, dest, when, name);
+    });
+  }
 
   var vibTimers = [];
   /* Vibración distinta por tipo: pulso corto = trabajo, largo = descanso */
@@ -75,7 +117,7 @@
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'high', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'longbeep', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -113,6 +155,7 @@
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();
+      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, 0); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
     },
@@ -121,6 +164,7 @@
     schedule: function (event, delaySec) {
       var s = root.Store.settings();
       if (!ensure()) return false;
+      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
       playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       if (s.vibrate && navigator.vibrate) {
         var t = setTimeout(function () { vibrate(event, s); }, Math.max(0, delaySec) * 1000);
@@ -134,16 +178,20 @@
       live.slice().forEach(function (n) { try { n.stop(0); } catch (e) {} });
       live.length = 0;
       vibTimers.forEach(clearTimeout); vibTimers.length = 0;
+      speechTimers.forEach(clearTimeout); speechTimers.length = 0;
+      try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {}
       if (navigator.vibrate) navigator.vibrate(0);
     },
     /* Decodifica los sonidos propios con antelación para que estén listos al programarlos */
     prepare: function () {
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
+      loadVoice(c, 'half'); loadVoice(c, 'welldone');
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
     },
     preview: function (event) {
       var s = root.Store.settings();
+      if (VOICES[event]) return playVoice(event, s.volume, 0);
       playSound(s.sounds[event], event, s.volume);
     },
     /* Convierte un archivo de audio en dataURL para guardarlo (máx. ~700 KB) */

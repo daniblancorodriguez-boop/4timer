@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.5';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.6';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -658,7 +658,7 @@
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3 }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, voice: settings.voice !== false }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -981,6 +981,8 @@
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
+      '<label class="switch"><span>Voz: «Mitad del tiempo superada» y «Well done!»</span><input type="checkbox" id="vz"' + (s.voice !== false ? ' checked' : '') + '></label>' +
+      '<div class="row" style="gap:8px;margin:0 0 10px"><button class="btn small" data-test="half">Probar mitad</button><button class="btn small" data-test="welldone">Probar Well done</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
@@ -997,6 +999,7 @@
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
+      else if (t.id === 'vz') Store.setSettings({ voice: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }
       else if (t.id === 'gym') Store.setSettings({ gymName: t.value.trim() });
