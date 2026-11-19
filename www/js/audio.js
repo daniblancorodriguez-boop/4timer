@@ -69,6 +69,10 @@
     longbeep: { label: 'Pitido largo (inicio)', play: function (c, d, w) {
       tone(c, d, { when: w, freq: 880, dur: 1.0, gain: 0.6, sustain: true });
     } },
+    startseq: { label: 'Secuencia: 3 pitidos + largo (archivo)', play: function (c, d, w) {
+      tone(c, d, { when: w, freq: 880, dur: 1.0, gain: 0.6, sustain: true });
+    } },
+    voice:  { label: 'Voz', play: function () {} },
     none:   { label: 'Silencio',      play: function () {} }
   };
 
@@ -78,6 +82,7 @@
     welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
   };
   var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
+  function muted(s, ev) { var d = s.sounds && s.sounds[ev]; return !!(d && d.preset === 'none'); }
   var vbuf = {}, speechTimers = [];
   function playStart(volume, delay) {
     var c = ensure(); if (!c) return;
@@ -131,7 +136,7 @@
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'longbeep', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -170,7 +175,7 @@
     play: function (event) {
       var s = root.Store.settings();
       if (event === 'startseq') return playStart(s.volume, 0);
-      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, 0); return; }
+      if (VOICES[event]) { if (!muted(s, event)) playVoice(event, s.volume, 0); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
     },
@@ -180,7 +185,7 @@
       var s = root.Store.settings();
       if (!ensure()) return false;
       if (event === 'startseq') { playStart(s.volume, Math.max(0, delaySec)); return true; }
-      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
+      if (VOICES[event]) { if (!muted(s, event)) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
       playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       if (s.vibrate && navigator.vibrate) {
         var t = setTimeout(function () { vibrate(event, s); }, Math.max(0, delaySec) * 1000);
@@ -207,7 +212,7 @@
     },
     preview: function (event) {
       var s = root.Store.settings();
-      if (event === 'startseq') return playStart(s.volume, 0);
+      if (event === 'startseq' || (event === 'go' && (s.sounds.go || {}).preset === 'startseq')) return playStart(s.volume, 0);
       if (VOICES[event]) return playVoice(event, s.volume, 0);
       playSound(s.sounds[event], event, s.volume);
     },

@@ -194,25 +194,25 @@
       for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
       out.push({ ev: 'go', ms: P });
     }
-    var voice = opts.voice !== false;
+    var vh = opts.voice !== false && opts.half !== false, vw = opts.voice !== false && opts.welldone !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
         if (opts.beepLast3 && plan.cap > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: P + (plan.cap - r) * 1000 });
-        if (voice && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
+        if (vh && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
         out.push({ ev: 'end', ms: P + plan.cap * 1000 });
-        if (voice) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
+        if (vw) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
       }
     } else {
       var acc = P, perSeg = plan.mode === 'emom' || plan.mode === 'fgb' || plan.mode === 'amrapx';
-      if (voice && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
+      if (vh && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
       plan.segments.forEach(function (sg, i) {
-        if (voice && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
+        if (vh && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
         if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });
         if (opts.beepLast3 && sg.dur > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: acc + (sg.dur - r) * 1000 });
         acc += sg.dur * 1000;
       });
       out.push({ ev: 'end', ms: acc });
-      if (voice && plan.mode !== 'rest') out.push({ ev: 'welldone', ms: acc + 900 });
+      if (vw && plan.mode !== 'rest') out.push({ ev: 'welldone', ms: acc + 900 });
     }
     return out.sort(function (a, b) { return a.ms - b.ms; });
   }

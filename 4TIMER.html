@@ -643,25 +643,25 @@ svg { overflow: visible; }
       for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
       out.push({ ev: 'go', ms: P });
     }
-    var voice = opts.voice !== false;
+    var vh = opts.voice !== false && opts.half !== false, vw = opts.voice !== false && opts.welldone !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
         if (opts.beepLast3 && plan.cap > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: P + (plan.cap - r) * 1000 });
-        if (voice && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
+        if (vh && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
         out.push({ ev: 'end', ms: P + plan.cap * 1000 });
-        if (voice) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
+        if (vw) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
       }
     } else {
       var acc = P, perSeg = plan.mode === 'emom' || plan.mode === 'fgb' || plan.mode === 'amrapx';
-      if (voice && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
+      if (vh && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
       plan.segments.forEach(function (sg, i) {
-        if (voice && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
+        if (vh && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
         if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });
         if (opts.beepLast3 && sg.dur > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: acc + (sg.dur - r) * 1000 });
         acc += sg.dur * 1000;
       });
       out.push({ ev: 'end', ms: acc });
-      if (voice && plan.mode !== 'rest') out.push({ ev: 'welldone', ms: acc + 900 });
+      if (vw && plan.mode !== 'rest') out.push({ ev: 'welldone', ms: acc + 900 });
     }
     return out.sort(function (a, b) { return a.ms - b.ms; });
   }
@@ -891,9 +891,9 @@ svg { overflow: visible; }
   function defaults() {
     return {
       settings: {
-        runAutoPause: false, prep: 10, beepLast3: true, voice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
-          countdown: { preset: 'beep' }, go: { preset: 'longbeep' }, minute: { preset: 'bell' },
+          countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }
@@ -931,6 +931,13 @@ svg { overflow: visible; }
         var p = JSON.parse(raw);
         d.settings = Object.assign(d.settings, p.settings || {});
         d.settings.sounds = Object.assign(defaults().settings.sounds, (p.settings && p.settings.sounds) || {});
+        if (!d.settings.soundsV3) {
+          d.settings.soundsV3 = true;
+          var g = d.settings.sounds.go;
+          if (g && ['horn', 'high', 'longbeep'].indexOf(g.preset) > -1) d.settings.sounds.go = { preset: 'startseq' };
+          if (d.settings.voice === false) { d.settings.sounds.half = { preset: 'none' }; d.settings.sounds.welldone = { preset: 'none' }; }
+          delete d.settings.voice;
+        }
         if (!d.settings.soundsV2) { d.settings.soundsV2 = true; if (d.settings.sounds.go && d.settings.sounds.go.preset === 'horn') d.settings.sounds.go = { preset: 'longbeep' }; }
         d.configs = p.configs || {};
         if (Array.isArray(p.exercises)) d.exercises = p.exercises;
@@ -1159,6 +1166,10 @@ svg { overflow: visible; }
     longbeep: { label: 'Pitido largo (inicio)', play: function (c, d, w) {
       tone(c, d, { when: w, freq: 880, dur: 1.0, gain: 0.6, sustain: true });
     } },
+    startseq: { label: 'Secuencia: 3 pitidos + largo (archivo)', play: function (c, d, w) {
+      tone(c, d, { when: w, freq: 880, dur: 1.0, gain: 0.6, sustain: true });
+    } },
+    voice:  { label: 'Voz', play: function () {} },
     none:   { label: 'Silencio',      play: function () {} }
   };
 
@@ -1168,6 +1179,7 @@ svg { overflow: visible; }
     welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
   };
   var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
+  function muted(s, ev) { var d = s.sounds && s.sounds[ev]; return !!(d && d.preset === 'none'); }
   var vbuf = {}, speechTimers = [];
   function playStart(volume, delay) {
     var c = ensure(); if (!c) return;
@@ -1221,7 +1233,7 @@ svg { overflow: visible; }
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'longbeep', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -1260,7 +1272,7 @@ svg { overflow: visible; }
     play: function (event) {
       var s = root.Store.settings();
       if (event === 'startseq') return playStart(s.volume, 0);
-      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, 0); return; }
+      if (VOICES[event]) { if (!muted(s, event)) playVoice(event, s.volume, 0); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
     },
@@ -1270,7 +1282,7 @@ svg { overflow: visible; }
       var s = root.Store.settings();
       if (!ensure()) return false;
       if (event === 'startseq') { playStart(s.volume, Math.max(0, delaySec)); return true; }
-      if (VOICES[event]) { if (s.voice !== false) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
+      if (VOICES[event]) { if (!muted(s, event)) playVoice(event, s.volume, Math.max(0, delaySec)); return true; }
       playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       if (s.vibrate && navigator.vibrate) {
         var t = setTimeout(function () { vibrate(event, s); }, Math.max(0, delaySec) * 1000);
@@ -1297,7 +1309,7 @@ svg { overflow: visible; }
     },
     preview: function (event) {
       var s = root.Store.settings();
-      if (event === 'startseq') return playStart(s.volume, 0);
+      if (event === 'startseq' || (event === 'go' && (s.sounds.go || {}).preset === 'startseq')) return playStart(s.volume, 0);
       if (VOICES[event]) return playVoice(event, s.volume, 0);
       playSound(s.sounds[event], event, s.volume);
     },
@@ -3599,7 +3611,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.10';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.11';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -4254,7 +4266,8 @@ svg { overflow: visible; }
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, voice: settings.voice !== false, startSeq: true }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    function soundOff(k) { var d = settings.sounds[k]; return !!(d && d.preset === 'none'); }
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -4520,11 +4533,13 @@ svg { overflow: visible; }
   /* ---------- Ajustes ---------- */
   var EVENTS = [
     { id: 'countdown', name: 'Cuenta atrás 3, 2, 1', hint: 'Últimos 3 segundos antes de empezar (y de cada intervalo).' },
-    { id: 'go', name: 'Inicio del entreno', hint: 'Cuando el reloj arranca tras la cuenta atrás.' },
+    { id: 'go', name: 'Inicio del entreno', hint: 'Cuando el reloj arranca. Con «Secuencia» y una cuenta atrás de 4 s o más, suenan 3 pitidos cortos y uno largo justo al arrancar.' },
     { id: 'minute', name: 'Cambio de minuto', hint: 'EMOM y Fight Gone Bad: cada vez que empieza un nuevo intervalo.' },
     { id: 'work', name: 'Empieza el trabajo', hint: 'Tabata, intervalos y trabajo = descanso.' },
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
     { id: 'end', name: 'Fin del tiempo', hint: 'AMRAP, cuenta atrás y time cap del For Time.' },
+    { id: 'half', name: 'Voz: mitad del tiempo', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
+    { id: 'welldone', name: 'Voz: final del entreno', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },
     { id: 'lvl2', name: 'Running: cambio a medio', hint: 'Series de running: empieza un tramo a ritmo medio.' },
     { id: 'lvl3', name: 'Running: cambio a fuerte / sprint', hint: 'Series de running: empieza un tramo fuerte o sprint.' }
@@ -4554,7 +4569,12 @@ svg { overflow: visible; }
     var s = Store.settings();
     function presetOptions(ev) {
       var cur = s.sounds[ev.id] || { preset: 'beep' };
-      var o = Object.keys(Sound.PRESETS).map(function (k) {
+      var keys = Object.keys(Sound.PRESETS).filter(function (k) {
+        if (ev.voice) return k === 'voice' || k === 'none';
+        if (k === 'voice') return false;
+        return k !== 'startseq' || ev.id === 'go';
+      });
+      var o = keys.map(function (k) {
         return '<option value="' + k + '"' + (cur.preset === k ? ' selected' : '') + '>' + esc(Sound.PRESETS[k].label) + '</option>';
       }).join('');
       if (cur.data) o += '<option value="custom"' + (cur.preset === 'custom' ? ' selected' : '') + '>Mi sonido</option>';
@@ -4565,7 +4585,7 @@ svg { overflow: visible; }
       return '<div class="snd"><div class="s-name">' + esc(ev.name) + '</div><div class="s-hint">' + esc(ev.hint) + '</div>' +
         '<div class="s-row"><select class="text-in" data-ev="' + ev.id + '" aria-label="Sonido: ' + esc(ev.name) + '">' + presetOptions(ev) + '</select>' +
         '<button class="btn small" data-test="' + ev.id + '" aria-label="Probar">' + ICON.play + '</button>' +
-        '<label class="btn small" style="cursor:pointer">Subir<input type="file" accept="audio/*" hidden data-up="' + ev.id + '"></label></div>' +
+        (ev.voice ? '' : '<label class="btn small" style="cursor:pointer">Subir<input type="file" accept="audio/*" hidden data-up="' + ev.id + '"></label>') + '</div>' +
         (cur.data ? '<div class="s-file">Archivo propio: ' + esc(cur.name || 'sonido') + '</div>' : '') + '</div>';
     }).join('');
 
@@ -4577,8 +4597,6 @@ svg { overflow: visible; }
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
-      '<label class="switch"><span>Voz: «Mitad del tiempo superada» y «Well done!»</span><input type="checkbox" id="vz"' + (s.voice !== false ? ' checked' : '') + '></label>' +
-      '<div class="row" style="gap:8px;margin:0 0 10px"><button class="btn small" data-test="half">Probar mitad</button><button class="btn small" data-test="welldone">Probar Well done</button><button class="btn small" data-test="startseq">Probar inicio</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
@@ -4595,7 +4613,6 @@ svg { overflow: visible; }
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
-      else if (t.id === 'vz') Store.setSettings({ voice: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }
       else if (t.id === 'gym') Store.setSettings({ gymName: t.value.trim() });

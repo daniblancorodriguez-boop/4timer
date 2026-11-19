@@ -306,7 +306,7 @@ const www = path.join(__dirname, '..', 'www');
   await go('#/settings'); await tick(20); click($('#snd-access')); await tick(20);
   const sn = w.Store.settings().sounds;
   assert.strictEqual(sn.work.preset, 'tick'); assert.strictEqual(sn.rest.preset, 'long');
-  assert.strictEqual(new Set(Object.values(sn).map(x => x.preset)).size, 9, 'los 9 eventos suenan distinto');
+  assert.strictEqual(new Set(Object.values(sn).map(x => x.preset)).size, 10, 'cada sonido distinto (las dos voces comparten preset)');
   assert.ok(w.Sound.PRESETS.tick && w.Sound.PRESETS.long);
   console.log('Accesibilidad OK');
 

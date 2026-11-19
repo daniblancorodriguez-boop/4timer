@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.10';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.11';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -658,7 +658,8 @@
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, voice: settings.voice !== false, startSeq: true }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    function soundOff(k) { var d = settings.sounds[k]; return !!(d && d.preset === 'none'); }
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -924,11 +925,13 @@
   /* ---------- Ajustes ---------- */
   var EVENTS = [
     { id: 'countdown', name: 'Cuenta atrás 3, 2, 1', hint: 'Últimos 3 segundos antes de empezar (y de cada intervalo).' },
-    { id: 'go', name: 'Inicio del entreno', hint: 'Cuando el reloj arranca tras la cuenta atrás.' },
+    { id: 'go', name: 'Inicio del entreno', hint: 'Cuando el reloj arranca. Con «Secuencia» y una cuenta atrás de 4 s o más, suenan 3 pitidos cortos y uno largo justo al arrancar.' },
     { id: 'minute', name: 'Cambio de minuto', hint: 'EMOM y Fight Gone Bad: cada vez que empieza un nuevo intervalo.' },
     { id: 'work', name: 'Empieza el trabajo', hint: 'Tabata, intervalos y trabajo = descanso.' },
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
     { id: 'end', name: 'Fin del tiempo', hint: 'AMRAP, cuenta atrás y time cap del For Time.' },
+    { id: 'half', name: 'Voz: mitad del tiempo', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
+    { id: 'welldone', name: 'Voz: final del entreno', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },
     { id: 'lvl2', name: 'Running: cambio a medio', hint: 'Series de running: empieza un tramo a ritmo medio.' },
     { id: 'lvl3', name: 'Running: cambio a fuerte / sprint', hint: 'Series de running: empieza un tramo fuerte o sprint.' }
@@ -958,7 +961,12 @@
     var s = Store.settings();
     function presetOptions(ev) {
       var cur = s.sounds[ev.id] || { preset: 'beep' };
-      var o = Object.keys(Sound.PRESETS).map(function (k) {
+      var keys = Object.keys(Sound.PRESETS).filter(function (k) {
+        if (ev.voice) return k === 'voice' || k === 'none';
+        if (k === 'voice') return false;
+        return k !== 'startseq' || ev.id === 'go';
+      });
+      var o = keys.map(function (k) {
         return '<option value="' + k + '"' + (cur.preset === k ? ' selected' : '') + '>' + esc(Sound.PRESETS[k].label) + '</option>';
       }).join('');
       if (cur.data) o += '<option value="custom"' + (cur.preset === 'custom' ? ' selected' : '') + '>Mi sonido</option>';
@@ -969,7 +977,7 @@
       return '<div class="snd"><div class="s-name">' + esc(ev.name) + '</div><div class="s-hint">' + esc(ev.hint) + '</div>' +
         '<div class="s-row"><select class="text-in" data-ev="' + ev.id + '" aria-label="Sonido: ' + esc(ev.name) + '">' + presetOptions(ev) + '</select>' +
         '<button class="btn small" data-test="' + ev.id + '" aria-label="Probar">' + ICON.play + '</button>' +
-        '<label class="btn small" style="cursor:pointer">Subir<input type="file" accept="audio/*" hidden data-up="' + ev.id + '"></label></div>' +
+        (ev.voice ? '' : '<label class="btn small" style="cursor:pointer">Subir<input type="file" accept="audio/*" hidden data-up="' + ev.id + '"></label>') + '</div>' +
         (cur.data ? '<div class="s-file">Archivo propio: ' + esc(cur.name || 'sonido') + '</div>' : '') + '</div>';
     }).join('');
 
@@ -981,8 +989,6 @@
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
-      '<label class="switch"><span>Voz: «Mitad del tiempo superada» y «Well done!»</span><input type="checkbox" id="vz"' + (s.voice !== false ? ' checked' : '') + '></label>' +
-      '<div class="row" style="gap:8px;margin:0 0 10px"><button class="btn small" data-test="half">Probar mitad</button><button class="btn small" data-test="welldone">Probar Well done</button><button class="btn small" data-test="startseq">Probar inicio</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
@@ -999,7 +1005,6 @@
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
-      else if (t.id === 'vz') Store.setSettings({ voice: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }
       else if (t.id === 'gym') Store.setSettings({ gymName: t.value.trim() });
