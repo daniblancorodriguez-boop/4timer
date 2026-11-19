@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.12';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.13';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -929,7 +929,7 @@
     { id: 'minute', name: 'Cambio de minuto', hint: 'EMOM y Fight Gone Bad: cada vez que empieza un nuevo intervalo.' },
     { id: 'work', name: 'Empieza el trabajo', hint: 'Tabata, intervalos y trabajo = descanso.' },
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
-    { id: 'end', name: 'Fin del tiempo', hint: 'Campana al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
+    { id: 'end', name: 'Fin del tiempo', hint: 'Bocina al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
     { id: 'half', name: 'Voz «Mitad del tiempo superada»', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
     { id: 'welldone', name: 'Voz «Well done!» al terminar', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },

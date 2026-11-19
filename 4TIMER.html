@@ -894,7 +894,7 @@ svg { overflow: visible; }
         runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, minute: { preset: 'bell' },
-          work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'bell' },
+          work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }
       },
@@ -938,6 +938,7 @@ svg { overflow: visible; }
           if (d.settings.voice === false) { d.settings.sounds.half = { preset: 'none' }; d.settings.sounds.welldone = { preset: 'none' }; }
           delete d.settings.voice;
         }
+        if (!d.settings.soundsV5) { d.settings.soundsV5 = true; if (d.settings.soundsV4 && d.settings.sounds.end && d.settings.sounds.end.preset === 'bell') d.settings.sounds.end = { preset: 'horn' }; }
         if (!d.settings.soundsV4) { d.settings.soundsV4 = true; if (d.settings.sounds.end && d.settings.sounds.end.preset === 'horn') d.settings.sounds.end = { preset: 'bell' }; }
         if (!d.settings.soundsV2) { d.settings.soundsV2 = true; if (d.settings.sounds.go && d.settings.sounds.go.preset === 'horn') d.settings.sounds.go = { preset: 'longbeep' }; }
         d.configs = p.configs || {};
@@ -1234,7 +1235,7 @@ svg { overflow: visible; }
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', minute: 'high', work: 'tick', rest: 'long', end: 'bell', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -3612,7 +3613,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.12';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.13';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -4538,7 +4539,7 @@ svg { overflow: visible; }
     { id: 'minute', name: 'Cambio de minuto', hint: 'EMOM y Fight Gone Bad: cada vez que empieza un nuevo intervalo.' },
     { id: 'work', name: 'Empieza el trabajo', hint: 'Tabata, intervalos y trabajo = descanso.' },
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
-    { id: 'end', name: 'Fin del tiempo', hint: 'Campana al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
+    { id: 'end', name: 'Fin del tiempo', hint: 'Bocina al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
     { id: 'half', name: 'Voz «Mitad del tiempo superada»', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
     { id: 'welldone', name: 'Voz «Well done!» al terminar', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },

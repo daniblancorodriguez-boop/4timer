@@ -86,7 +86,7 @@
         runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, minute: { preset: 'bell' },
-          work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'bell' },
+          work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }
       },
@@ -130,6 +130,7 @@
           if (d.settings.voice === false) { d.settings.sounds.half = { preset: 'none' }; d.settings.sounds.welldone = { preset: 'none' }; }
           delete d.settings.voice;
         }
+        if (!d.settings.soundsV5) { d.settings.soundsV5 = true; if (d.settings.soundsV4 && d.settings.sounds.end && d.settings.sounds.end.preset === 'bell') d.settings.sounds.end = { preset: 'horn' }; }
         if (!d.settings.soundsV4) { d.settings.soundsV4 = true; if (d.settings.sounds.end && d.settings.sounds.end.preset === 'horn') d.settings.sounds.end = { preset: 'bell' }; }
         if (!d.settings.soundsV2) { d.settings.soundsV2 = true; if (d.settings.sounds.go && d.settings.sounds.go.preset === 'horn') d.settings.sounds.go = { preset: 'longbeep' }; }
         d.configs = p.configs || {};
