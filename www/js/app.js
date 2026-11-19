@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.11';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.12';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -929,9 +929,9 @@
     { id: 'minute', name: 'Cambio de minuto', hint: 'EMOM y Fight Gone Bad: cada vez que empieza un nuevo intervalo.' },
     { id: 'work', name: 'Empieza el trabajo', hint: 'Tabata, intervalos y trabajo = descanso.' },
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
-    { id: 'end', name: 'Fin del tiempo', hint: 'AMRAP, cuenta atrás y time cap del For Time.' },
-    { id: 'half', name: 'Voz: mitad del tiempo', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
-    { id: 'welldone', name: 'Voz: final del entreno', hint: '«Well done!» justo después del sonido de fin.', voice: true },
+    { id: 'end', name: 'Fin del tiempo', hint: 'Campana al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
+    { id: 'half', name: 'Voz «Mitad del tiempo superada»', hint: '«Mitad del tiempo superada». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
+    { id: 'welldone', name: 'Voz «Well done!» al terminar', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },
     { id: 'lvl2', name: 'Running: cambio a medio', hint: 'Series de running: empieza un tramo a ritmo medio.' },
     { id: 'lvl3', name: 'Running: cambio a fuerte / sprint', hint: 'Series de running: empieza un tramo fuerte o sprint.' }
@@ -974,6 +974,8 @@
     }
     var sounds = EVENTS.map(function (ev) {
       var cur = s.sounds[ev.id] || {};
+      if (ev.voice) return '<div class="snd"><label class="switch"><span>' + esc(ev.name) + '</span><input type="checkbox" data-vz="' + ev.id + '"' + (cur.preset === 'none' ? '' : ' checked') + '></label>' +
+        '<div class="s-hint">' + esc(ev.hint) + '</div><button class="btn small" data-test="' + ev.id + '" aria-label="Probar voz">' + ICON.play + '</button></div>';
       return '<div class="snd"><div class="s-name">' + esc(ev.name) + '</div><div class="s-hint">' + esc(ev.hint) + '</div>' +
         '<div class="s-row"><select class="text-in" data-ev="' + ev.id + '" aria-label="Sonido: ' + esc(ev.name) + '">' + presetOptions(ev) + '</select>' +
         '<button class="btn small" data-test="' + ev.id + '" aria-label="Probar">' + ICON.play + '</button>' +
@@ -1008,6 +1010,7 @@
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }
       else if (t.id === 'gym') Store.setSettings({ gymName: t.value.trim() });
+      else if (t.dataset.vz) Store.setSound(t.dataset.vz, { preset: t.checked ? 'voice' : 'none' });
       else if (t.dataset.ev) {
         var ev = t.dataset.ev, cur = Store.settings().sounds[ev] || {};
         Store.setSound(ev, { preset: t.value, data: cur.data, name: cur.name });
