@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.6.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.6.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -713,6 +713,7 @@
       }
       $('#phase').textContent = label;
       markExercise(cur);
+      if (typeof bigSync === 'function') bigSync();
     }
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
@@ -849,13 +850,15 @@
       if (bigEl) return;
       var o = document.createElement('div');
       o.className = 'bigclk'; o.id = 'bigclk-o'; o.dataset.type = run.dataset.type;
-      o.innerHTML = '<button class="bigx" id="bigx" aria-label="Cerrar reloj grande">✕</button><div class="stage"><div class="bezel"><div class="display">' +
+      o.innerHTML = '<div class="bigtop"><div class="bigphase" id="big-phase"></div><div class="bigbtns"><button class="bigb" id="bigpp"></button><button class="bigb" id="bigx" aria-label="Cerrar reloj grande">✕</button></div></div><div class="stage"><div class="bezel"><div class="display">' +
         '<div class="led" id="big-blue" role="img" aria-label="Rondas"></div><div class="led" id="big-red" role="img" aria-label="Tiempo"></div></div></div></div>';
       document.body.appendChild(o); bigEl = o;
       bigRed = new window.LED(o.querySelector('#big-red'), 'DD:DD'); bigBlue = new window.LED(o.querySelector('#big-blue'), 'DD');
       bigRed.set(lastRed || '00:00'); bigBlue.set(lastBlue || '00');
       bigUnfit = window.LED.autoFit(o.querySelector('.stage'), o.querySelector('.display'), o.querySelector('.bezel'));
       o.querySelector('#bigx').addEventListener('click', closeBig);
+      o.querySelector('#bigpp').addEventListener('click', function () { togglePause(); });
+      bigSync();
       if (manual) o.querySelector('#big-blue').addEventListener('click', function () { add(1); });
       bigOnResize = function () { o.classList.toggle('rot', window.innerHeight > window.innerWidth); };
       window.addEventListener('resize', bigOnResize);
@@ -867,6 +870,15 @@
         }).then(function () { setTimeout(bigOnResize, 350); });
       } catch (e) {}
       bigOnResize();
+    }
+    function bigSync() {
+      if (!bigEl) return;
+      var b = bigEl.querySelector('#bigpp'), playing = !ready && pausedAt === null && !finished;
+      b.hidden = finished;
+      b.innerHTML = playing ? ICON.pause : ICON.play;
+      b.setAttribute('aria-label', ready ? 'Iniciar entreno' : playing ? 'Pausar entreno' : 'Reanudar entreno');
+      bigEl.querySelector('#big-phase').textContent = $('#phase').textContent;
+      bigEl.classList.toggle('paused', pausedAt !== null && !ready && !finished);
     }
     function closeBig() {
       if (!bigEl) return;
