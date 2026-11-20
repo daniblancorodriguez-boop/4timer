@@ -83,7 +83,8 @@
     lastround:  { file: 'audio/lastround.mp3',  text: 'Last round!',  lang: 'en-US' },
     lastminute: { file: 'audio/lastminute.mp3', text: 'Last minute!', lang: 'en-US' },
     tenseconds: { file: 'audio/tenseconds.mp3', text: 'Ten seconds!', lang: 'en-US' },
-    restvoice:  { file: 'audio/rest.mp3',       text: 'Rest!',        lang: 'en-US' }
+    restvoice:  { file: 'audio/rest.mp3',       text: 'Rest!',        lang: 'en-US' },
+    govoice:    { file: 'audio/go.mp3',         text: 'Go!',          lang: 'en-US' }
   };
   var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
   function muted(s, ev) { var d = s.sounds && s.sounds[ev]; return !!(d && d.preset === 'none'); }
@@ -140,7 +141,7 @@
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', lastround: 'voice', lastminute: 'voice', tenseconds: 'voice', restvoice: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', lastround: 'voice', lastminute: 'voice', tenseconds: 'voice', restvoice: 'voice', govoice: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -220,7 +221,7 @@
     prepare: function () {
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
-      VOICES.start = { file: START }; ['half', 'welldone', 'lastround', 'lastminute', 'tenseconds', 'restvoice'].forEach(function (k) { loadVoice(c, k); }); loadVoice(c, 'start');
+      VOICES.start = { file: START }; ['half', 'welldone', 'lastround', 'lastminute', 'tenseconds', 'restvoice', 'govoice'].forEach(function (k) { loadVoice(c, k); }); loadVoice(c, 'start');
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
     },
     preview: function (event) {

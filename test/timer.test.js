@@ -168,3 +168,14 @@ console.log('TODOS LOS TESTS OK');
   assert.ok(!Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 3 }), 0, { restvoice: false }).some(e => e.ev === 'restvoice'));
   console.log('voz Rest OK');
 }
+
+{
+  const Tm = require('../www/js/timer.js');
+  const ev = (id, cfg, prep, o) => Tm.timeline(Tm.buildPlan(id, cfg), prep, Object.assign({ beepLast3: true }, o || {})).filter(e => e.ev === 'govoice').map(e => e.ms);
+  assert.deepStrictEqual(ev('tabata', { work: 20, rest: 10, rounds: 3 }, 10), [10300, 40300, 70300], 'Go al empezar y en cada trabajo tras descanso');
+  assert.deepStrictEqual(ev('emom', { interval: 60, rounds: 3 }, 0), [300, 60300, 120300], 'EMOM: Go cada minuto');
+  assert.deepStrictEqual(ev('amrap', { dur: 600 }, 10), [10300]);
+  assert.deepStrictEqual(ev('rest', { dur: 60 }, 10), [], 'Descanso sin Go');
+  assert.deepStrictEqual(ev('amrap', { dur: 600 }, 10, { govoice: false }), []);
+  console.log('voz Go OK');
+}
