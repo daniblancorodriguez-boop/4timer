@@ -194,17 +194,32 @@
       for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
       out.push({ ev: 'go', ms: P });
     }
+    var va = opts.voice !== false, vlr = va && opts.lastround !== false, vlm = va && opts.lastminute !== false, vts = va && opts.tenseconds !== false;
     var vh = opts.voice !== false && opts.half !== false, vw = opts.voice !== false && opts.welldone !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
         if (opts.beepLast3 && plan.cap > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: P + (plan.cap - r) * 1000 });
         if (vh && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
+        if (vlm && plan.cap >= 120) out.push({ ev: 'lastminute', ms: P + plan.cap * 1000 - 60000 });
+        if (vts && plan.cap >= 30) out.push({ ev: 'tenseconds', ms: P + plan.cap * 1000 - 10000 });
         out.push({ ev: 'end', ms: P + plan.cap * 1000 });
         if (vw) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
       }
     } else {
       var acc = P, perSeg = plan.mode === 'emom' || plan.mode === 'fgb' || plan.mode === 'amrapx';
       if (vh && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
+      var E = P + plan.total * 1000, ROUNDS = ['emom', 'tabata', 'interval', 'equal', 'fgb', 'amrapx'];
+      if (plan.mode !== 'rest') {
+        var lastR = 0, lrMs = null, acc2 = P;
+        plan.segments.forEach(function (sg) { if (sg.round > lastR) lastR = sg.round; });
+        if (lastR >= 2 && ROUNDS.indexOf(plan.mode) > -1) {
+          plan.segments.some(function (sg) { if (sg.round === lastR && sg.type !== 'rest') { lrMs = acc2; return true; } acc2 += sg.dur * 1000; return false; });
+          if (vlr && lrMs !== null) out.push({ ev: 'lastround', ms: lrMs });
+        }
+        var halfMs = (vh && !perSeg) ? P + plan.total * 500 : null;
+        if (vlm && plan.total >= 120 && !(lrMs !== null && Math.abs(lrMs - (E - 60000)) < 2000) && !(halfMs !== null && Math.abs(halfMs - (E - 60000)) < 5000)) out.push({ ev: 'lastminute', ms: E - 60000 });
+        if (vts && plan.total >= 30) out.push({ ev: 'tenseconds', ms: E - 10000 });
+      }
       plan.segments.forEach(function (sg, i) {
         if (vh && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
         if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });

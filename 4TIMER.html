@@ -643,17 +643,32 @@ svg { overflow: visible; }
       for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
       out.push({ ev: 'go', ms: P });
     }
+    var va = opts.voice !== false, vlr = va && opts.lastround !== false, vlm = va && opts.lastminute !== false, vts = va && opts.tenseconds !== false;
     var vh = opts.voice !== false && opts.half !== false, vw = opts.voice !== false && opts.welldone !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
         if (opts.beepLast3 && plan.cap > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: P + (plan.cap - r) * 1000 });
         if (vh && plan.cap >= 30) out.push({ ev: 'half', ms: P + plan.cap * 500 });
+        if (vlm && plan.cap >= 120) out.push({ ev: 'lastminute', ms: P + plan.cap * 1000 - 60000 });
+        if (vts && plan.cap >= 30) out.push({ ev: 'tenseconds', ms: P + plan.cap * 1000 - 10000 });
         out.push({ ev: 'end', ms: P + plan.cap * 1000 });
         if (vw) out.push({ ev: 'welldone', ms: P + plan.cap * 1000 + 900 });
       }
     } else {
       var acc = P, perSeg = plan.mode === 'emom' || plan.mode === 'fgb' || plan.mode === 'amrapx';
       if (vh && !perSeg && plan.mode !== 'rest' && plan.total >= 30) out.push({ ev: 'half', ms: P + plan.total * 500 });
+      var E = P + plan.total * 1000, ROUNDS = ['emom', 'tabata', 'interval', 'equal', 'fgb', 'amrapx'];
+      if (plan.mode !== 'rest') {
+        var lastR = 0, lrMs = null, acc2 = P;
+        plan.segments.forEach(function (sg) { if (sg.round > lastR) lastR = sg.round; });
+        if (lastR >= 2 && ROUNDS.indexOf(plan.mode) > -1) {
+          plan.segments.some(function (sg) { if (sg.round === lastR && sg.type !== 'rest') { lrMs = acc2; return true; } acc2 += sg.dur * 1000; return false; });
+          if (vlr && lrMs !== null) out.push({ ev: 'lastround', ms: lrMs });
+        }
+        var halfMs = (vh && !perSeg) ? P + plan.total * 500 : null;
+        if (vlm && plan.total >= 120 && !(lrMs !== null && Math.abs(lrMs - (E - 60000)) < 2000) && !(halfMs !== null && Math.abs(halfMs - (E - 60000)) < 5000)) out.push({ ev: 'lastminute', ms: E - 60000 });
+        if (vts && plan.total >= 30) out.push({ ev: 'tenseconds', ms: E - 10000 });
+      }
       plan.segments.forEach(function (sg, i) {
         if (vh && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
         if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });
@@ -893,7 +908,7 @@ svg { overflow: visible; }
       settings: {
         runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
-          countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, minute: { preset: 'bell' },
+          countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, lastround: { preset: 'voice' }, lastminute: { preset: 'voice' }, tenseconds: { preset: 'voice' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }
@@ -1178,7 +1193,10 @@ svg { overflow: visible; }
   /* Voces: archivos audio/half.mp3 y audio/welldone.mp3 (voz real). Si no están, voz robótica del móvil. */
   var VOICES = {
     half:     { file: 'audio/half.mp3',     text: 'Half time!',                lang: 'en-US' },
-    welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
+    welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' },
+    lastround:  { file: 'audio/lastround.mp3',  text: 'Last round!',  lang: 'en-US' },
+    lastminute: { file: 'audio/lastminute.mp3', text: 'Last minute!', lang: 'en-US' },
+    tenseconds: { file: 'audio/tenseconds.mp3', text: 'Ten seconds!', lang: 'en-US' }
   };
   var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
   function muted(s, ev) { var d = s.sounds && s.sounds[ev]; return !!(d && d.preset === 'none'); }
@@ -1235,7 +1253,7 @@ svg { overflow: visible; }
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
-  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
+  var ACCESSIBLE = { countdown: 'beep', go: 'startseq', half: 'voice', welldone: 'voice', lastround: 'voice', lastminute: 'voice', tenseconds: 'voice', minute: 'bell', work: 'tick', rest: 'long', end: 'horn', lvl1: 'gong', lvl2: 'double', lvl3: 'siren' };
 
   function master(c, volume) {
     var g = c.createGain();
@@ -1306,7 +1324,7 @@ svg { overflow: visible; }
     prepare: function () {
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
-      VOICES.start = { file: START }; loadVoice(c, 'half'); loadVoice(c, 'welldone'); loadVoice(c, 'start');
+      VOICES.start = { file: START }; ['half', 'welldone', 'lastround', 'lastminute', 'tenseconds'].forEach(function (k) { loadVoice(c, k); }); loadVoice(c, 'start');
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
     },
     preview: function (event) {
@@ -3613,7 +3631,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.14';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.15';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -4269,7 +4287,7 @@ svg { overflow: visible; }
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
     function soundOff(k) { var d = settings.sounds[k]; return !!(d && d.preset === 'none'); }
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), lastround: !soundOff('lastround'), lastminute: !soundOff('lastminute'), tenseconds: !soundOff('tenseconds'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -4541,6 +4559,9 @@ svg { overflow: visible; }
     { id: 'rest', name: 'Empieza el descanso', hint: 'Tabata, intervalos, descanso y Fight Gone Bad.' },
     { id: 'end', name: 'Fin del tiempo', hint: 'Bocina al terminar (AMRAP, EMOM, Tabata… y time cap del For Time); después, «Well done!» si está activado.' },
     { id: 'half', name: 'Voz «Half time!» a la mitad', hint: '«Half time!». EMOM y Fight Gone Bad: en cada intervalo; el resto: a la mitad del total.', voice: true },
+    { id: 'lastround', name: 'Voz «Last round!» en la última ronda', hint: 'Al empezar la última ronda: EMOM, Tabata, Intervalos, Trabajo = descanso, Fight Gone Bad y AMRAP con descansos.', voice: true },
+    { id: 'lastminute', name: 'Voz «Last minute!» en el último minuto', hint: 'Cuando falta 1 minuto para terminar (entrenos de 2 min o más). Si coincide con «Last round!» o con «Half time!», no se repite.', voice: true },
+    { id: 'tenseconds', name: 'Voz «Ten seconds!» a 10 segundos del final', hint: 'Cuando faltan 10 segundos para terminar el entreno (entrenos de 30 s o más).', voice: true },
     { id: 'welldone', name: 'Voz «Well done!» al terminar', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },
     { id: 'lvl2', name: 'Running: cambio a medio', hint: 'Series de running: empieza un tramo a ritmo medio.' },

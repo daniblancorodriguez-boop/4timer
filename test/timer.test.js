@@ -143,3 +143,19 @@ console.log('TODOS LOS TESTS OK');
   assert.ok(!Tm.timeline(pl, 3, { startSeq: true }).some(e => e.ev === 'startseq'), 'con 3 s se usan los pitidos sueltos');
   console.log('secuencia de inicio OK');
 }
+
+{
+  const Tm = require('../www/js/timer.js');
+  const ev = (id, cfg, prep, name) => Tm.timeline(Tm.buildPlan(id, cfg), prep || 0, { beepLast3: true }).filter(e => e.ev === name).map(e => e.ms);
+  assert.deepStrictEqual(ev('emom', { interval: 60, rounds: 5 }, 0, 'lastround'), [240000], 'EMOM: última ronda al empezar el último minuto');
+  assert.deepStrictEqual(ev('emom', { interval: 60, rounds: 5 }, 0, 'lastminute'), [], 'EMOM: Last minute no repite a Last round');
+  assert.deepStrictEqual(ev('emom', { interval: 60, rounds: 5 }, 0, 'tenseconds'), [290000]);
+  assert.deepStrictEqual(ev('amrap', { dur: 600 }, 10, 'lastminute'), [550000]);
+  assert.deepStrictEqual(ev('amrap', { dur: 600 }, 10, 'lastround'), [], 'AMRAP simple no tiene rondas');
+  assert.deepStrictEqual(ev('amrap', { dur: 600 }, 10, 'tenseconds'), [600000]);
+  assert.deepStrictEqual(ev('tabata', { work: 20, rest: 10, rounds: 8 }, 0, 'lastround'), [210000]);
+  assert.deepStrictEqual(ev('rest', { dur: 120 }, 0, 'tenseconds'), [], 'Descanso sin voces');
+  assert.ok(!Tm.timeline(Tm.buildPlan('amrap', { dur: 600 }), 0, { voice: false }).some(e => ['lastround', 'lastminute', 'tenseconds'].includes(e.ev)));
+  assert.ok(!Tm.timeline(Tm.buildPlan('amrap', { dur: 600 }), 0, { lastminute: false }).some(e => e.ev === 'lastminute'));
+  console.log('last round / last minute / ten seconds OK');
+}
