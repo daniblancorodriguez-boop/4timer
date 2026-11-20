@@ -159,3 +159,12 @@ console.log('TODOS LOS TESTS OK');
   assert.ok(!Tm.timeline(Tm.buildPlan('amrap', { dur: 600 }), 0, { lastminute: false }).some(e => e.ev === 'lastminute'));
   console.log('last round / last minute / ten seconds OK');
 }
+
+{
+  const Tm = require('../www/js/timer.js');
+  const ev = (id, cfg, name) => Tm.timeline(Tm.buildPlan(id, cfg), 0, { beepLast3: true }).filter(e => e.ev === name).map(e => e.ms);
+  assert.deepStrictEqual(ev('tabata', { work: 20, rest: 10, rounds: 3 }, 'restvoice'), [20500, 50500, 80500]);
+  assert.deepStrictEqual(ev('emom', { interval: 60, rounds: 3 }, 'restvoice'), [], 'EMOM no tiene descansos');
+  assert.ok(!Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 3 }), 0, { restvoice: false }).some(e => e.ev === 'restvoice'));
+  console.log('voz Rest OK');
+}

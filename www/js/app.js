@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.6.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.6.2';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -719,7 +719,7 @@
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
     function soundOff(k) { var d = settings.sounds[k]; return !!(d && d.preset === 'none'); }
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), lastround: !soundOff('lastround'), lastminute: !soundOff('lastminute'), tenseconds: !soundOff('tenseconds'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, half: !soundOff('half'), welldone: !soundOff('welldone'), lastround: !soundOff('lastround'), lastminute: !soundOff('lastminute'), tenseconds: !soundOff('tenseconds'), restvoice: !soundOff('restvoice'), startSeq: ((settings.sounds.go || {}).preset === 'startseq') }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
@@ -1046,6 +1046,7 @@
     { id: 'lastround', name: 'Voz «Last round!» en la última ronda', hint: 'Al empezar la última ronda: EMOM, Tabata, Intervalos, Trabajo = descanso, Fight Gone Bad y AMRAP con descansos.', voice: true },
     { id: 'lastminute', name: 'Voz «Last minute!» en el último minuto', hint: 'Cuando falta 1 minuto para terminar (entrenos de 2 min o más). Si coincide con «Last round!» o con «Half time!», no se repite.', voice: true },
     { id: 'tenseconds', name: 'Voz «Ten seconds!» a 10 segundos del final', hint: 'Cuando faltan 10 segundos para terminar el entreno (entrenos de 30 s o más).', voice: true },
+    { id: 'restvoice', name: 'Voz «Rest!» al empezar el descanso', hint: 'Suena justo después del sonido de descanso en Tabata, Intervalos, Trabajo = descanso, Fight Gone Bad y AMRAP con descansos (descansos de 5 s o más).', voice: true },
     { id: 'welldone', name: 'Voz «Well done!» al terminar', hint: '«Well done!» justo después del sonido de fin.', voice: true },
     { id: 'lvl1', name: 'Running: cambio a suave / andar', hint: 'Series de running: empieza un tramo suave o andando.' },
     { id: 'lvl2', name: 'Running: cambio a medio', hint: 'Series de running: empieza un tramo a ritmo medio.' },

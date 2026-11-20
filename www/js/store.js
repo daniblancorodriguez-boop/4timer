@@ -85,7 +85,7 @@
       settings: {
         runAutoPause: false, prep: 10, beepLast3: true, dial: 'ring', volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
-          countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, lastround: { preset: 'voice' }, lastminute: { preset: 'voice' }, tenseconds: { preset: 'voice' }, minute: { preset: 'bell' },
+          countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, lastround: { preset: 'voice' }, lastminute: { preset: 'voice' }, tenseconds: { preset: 'voice' }, restvoice: { preset: 'voice' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
           lvl1: { preset: 'gong' }, lvl2: { preset: 'double' }, lvl3: { preset: 'siren' }
         }

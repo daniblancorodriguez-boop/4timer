@@ -194,7 +194,7 @@
       for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
       out.push({ ev: 'go', ms: P });
     }
-    var va = opts.voice !== false, vlr = va && opts.lastround !== false, vlm = va && opts.lastminute !== false, vts = va && opts.tenseconds !== false;
+    var va = opts.voice !== false, vlr = va && opts.lastround !== false, vlm = va && opts.lastminute !== false, vts = va && opts.tenseconds !== false, vrs = va && opts.restvoice !== false;
     var vh = opts.voice !== false && opts.half !== false, vw = opts.voice !== false && opts.welldone !== false;
     if (plan.kind === 'up') {
       if (plan.cap) {
@@ -223,6 +223,7 @@
       plan.segments.forEach(function (sg, i) {
         if (vh && perSeg && sg.type !== 'rest' && sg.dur >= 20) out.push({ ev: 'half', ms: acc + sg.dur * 500 });
         if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });
+        if (i > 0 && vrs && sg.type === 'rest' && sg.dur >= 5) out.push({ ev: 'restvoice', ms: acc + 500 });
         if (opts.beepLast3 && sg.dur > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: acc + (sg.dur - r) * 1000 });
         acc += sg.dur * 1000;
       });
