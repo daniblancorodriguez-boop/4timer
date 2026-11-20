@@ -134,3 +134,8 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 - Sustituye a las casillas anteriores (Mostrar ejercicios, cartel, marcador…): ahora se quita el elemento. El formato horizontal 16:9 se ha retirado.
 - **Deshacer** (arriba de la tarjeta): vuelve atrás paso a paso hasta el inicio (mover, tamaño, giro, estilo, capas, plantilla, formato, fotos y vídeos, eliminar/añadir). Muestra cuántos pasos hay.
 - Tocar **fuera de la tarjeta** quita la selección.
+
+## Pantalla del reloj (v1.6.0)
+- **Esfera circular** (por defecto): círculo naranja con el tiempo y las rondas dentro y 60 rayas finas que se consumen al ritmo del reloj (por pantalla de preparación, intervalo/bloque, time cap, o cada minuto en For Time sin cap). **Esfera clásica** en Ajustes → Reloj.
+- Al pulsar «Empezar» se abre el reloj parado y hay que pulsar **INICIAR** (suena un «boop»). Reiniciar vuelve a esa espera.
+- **Reloj grande**: solo reloj y rondas a pantalla completa y en horizontal (pantalla completa + bloqueo de orientación si el móvil lo permite; si no, se gira por CSS). Tocar las rondas suma 1 (modos manuales). ✕ para cerrar.

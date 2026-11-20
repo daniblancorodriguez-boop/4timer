@@ -83,7 +83,7 @@
   function defaults() {
     return {
       settings: {
-        runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        runAutoPause: false, prep: 10, beepLast3: true, dial: 'ring', volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, lastround: { preset: 'voice' }, lastminute: { preset: 'voice' }, tenseconds: { preset: 'voice' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },

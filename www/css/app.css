@@ -428,3 +428,22 @@ svg { overflow: visible; }
 
 .ed-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .ed-top .btn { min-width: 150px; }
+
+
+/* ---------- Esfera circular (por defecto) y reloj grande ---------- */
+.stage.ring .bezel { position: relative; display: flex; align-items: center; justify-content: center; padding: 0; border: 4px solid var(--orange); border-radius: 50%; background: #000;
+  box-shadow: 0 0 22px rgba(245, 146, 30, .35), inset 0 0 50px rgba(0, 0, 0, .9); flex: 0 0 auto; }
+.ring-ticks { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--orange); filter: drop-shadow(0 0 2px currentColor); pointer-events: none; }
+.run[data-type=work] .ring-ticks { color: var(--red); }
+.run[data-type=rest] .ring-ticks { color: var(--rest); }
+.stage.ring .display { position: relative; }
+.bigbtn { margin: 0 0 8px; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.bigbtn svg { width: 22px; height: 22px; }
+.bigclk { position: fixed; inset: 0; z-index: 300; background: #000; display: flex; flex-direction: column; padding: 8px; }
+.bigclk .stage { flex: 1; }
+.bigclk .bezel { border: 0; background: none; box-shadow: none; padding: 0; }
+.bigclk #big-red { color: var(--red); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(255, 45, 45, .55)); }
+.bigclk[data-type=rest] #big-red { color: var(--rest); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(38, 224, 142, .5)); }
+.bigclk #big-blue { color: var(--blue); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(58, 116, 255, .55)); cursor: pointer; }
+.bigx { position: absolute; top: 8px; right: 8px; width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--line); background: rgba(31, 31, 34, .8); color: var(--muted); font-size: 24px; z-index: 2; }
+.bigclk.rot { inset: auto; top: 0; left: 100vw; width: 100vh; height: 100vw; transform-origin: top left; transform: rotate(90deg); }

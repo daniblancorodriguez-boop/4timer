@@ -196,6 +196,15 @@
       }
       return true;
     },
+    /* "Boop" al tocar INICIAR: dos pulsos suaves, el segundo más flojo */
+    boop: function () {
+      var c = ensure(), s = root.Store.settings();
+      if (!c) return;
+      var d = master(c, s.volume), t = c.currentTime;
+      tone(c, d, { when: t, freq: 480, freqEnd: 300, dur: 0.16, gain: 0.7 });
+      tone(c, d, { when: t, start: 0.17, freq: 480, freqEnd: 300, dur: 0.14, gain: 0.35 });
+      if (s.vibrate && navigator.vibrate) navigator.vibrate(40);
+    },
     available: function () { return !!(root.AudioContext || root.webkitAudioContext); },
     /* Cancela todo lo programado que aún no ha sonado (pausa, reinicio, terminar) */
     cancelAll: function () {

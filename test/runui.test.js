@@ -145,6 +145,7 @@ const www = path.join(__dirname, '..', 'www');
   // ---- salir de un entreno: seguir / pausar y guardar / salir ----
   await go('#/'); await go('#/config/amrap'); w.Store.setSettings({ prep: 3 });
   click($('#start')); await tick(60);
+  assert.ok(/INICIAR/.test($('#pause').textContent)); click($('#pause')); await tick(30);
   assert.strictEqual(w.location.hash, '#/run');
   offset += 20000; await tick(150);
   w.history.back(); await tick(250);

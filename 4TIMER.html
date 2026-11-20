@@ -440,6 +440,25 @@ svg { overflow: visible; }
 .ed-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .ed-top .btn { min-width: 150px; }
 
+
+/* ---------- Esfera circular (por defecto) y reloj grande ---------- */
+.stage.ring .bezel { position: relative; display: flex; align-items: center; justify-content: center; padding: 0; border: 4px solid var(--orange); border-radius: 50%; background: #000;
+  box-shadow: 0 0 22px rgba(245, 146, 30, .35), inset 0 0 50px rgba(0, 0, 0, .9); flex: 0 0 auto; }
+.ring-ticks { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--orange); filter: drop-shadow(0 0 2px currentColor); pointer-events: none; }
+.run[data-type=work] .ring-ticks { color: var(--red); }
+.run[data-type=rest] .ring-ticks { color: var(--rest); }
+.stage.ring .display { position: relative; }
+.bigbtn { margin: 0 0 8px; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.bigbtn svg { width: 22px; height: 22px; }
+.bigclk { position: fixed; inset: 0; z-index: 300; background: #000; display: flex; flex-direction: column; padding: 8px; }
+.bigclk .stage { flex: 1; }
+.bigclk .bezel { border: 0; background: none; box-shadow: none; padding: 0; }
+.bigclk #big-red { color: var(--red); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(255, 45, 45, .55)); }
+.bigclk[data-type=rest] #big-red { color: var(--rest); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(38, 224, 142, .5)); }
+.bigclk #big-blue { color: var(--blue); filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(58, 116, 255, .55)); cursor: pointer; }
+.bigx { position: absolute; top: 8px; right: 8px; width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--line); background: rgba(31, 31, 34, .8); color: var(--muted); font-size: 24px; z-index: 2; }
+.bigclk.rot { inset: auto; top: 0; left: 100vw; width: 100vh; height: 100vw; transform-origin: top left; transform: rotate(90deg); }
+
 </style>
 </head>
 <body>
@@ -906,7 +925,7 @@ svg { overflow: visible; }
   function defaults() {
     return {
       settings: {
-        runAutoPause: false, prep: 10, beepLast3: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        runAutoPause: false, prep: 10, beepLast3: true, dial: 'ring', volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'startseq' }, half: { preset: 'voice' }, welldone: { preset: 'voice' }, lastround: { preset: 'voice' }, lastminute: { preset: 'voice' }, tenseconds: { preset: 'voice' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' },
@@ -1309,6 +1328,15 @@ svg { overflow: visible; }
         vibTimers.push(t);
       }
       return true;
+    },
+    /* "Boop" al tocar INICIAR: dos pulsos suaves, el segundo más flojo */
+    boop: function () {
+      var c = ensure(), s = root.Store.settings();
+      if (!c) return;
+      var d = master(c, s.volume), t = c.currentTime;
+      tone(c, d, { when: t, freq: 480, freqEnd: 300, dur: 0.16, gain: 0.7 });
+      tone(c, d, { when: t, start: 0.17, freq: 480, freqEnd: 300, dur: 0.14, gain: 0.35 });
+      if (s.vibrate && navigator.vibrate) navigator.vibrate(40);
     },
     available: function () { return !!(root.AudioContext || root.webkitAudioContext); },
     /* Cancela todo lo programado que aún no ha sonado (pausa, reinicio, terminar) */
@@ -3631,7 +3659,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.15';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.6.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -3669,6 +3697,7 @@ svg { overflow: visible; }
     return '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' + (extra || '') + '>' + inner + '</svg>';
   }
   var ICON = {
+    expand: svg('<path d="M5 12V5h7M20 5h7v7M27 20v7h-7M12 27H5v-7"/>'),
     fortime: svg('<circle cx="16" cy="18" r="10"/><path d="M16 18v-6M13 4h6M16 4v4"/>'),
     amrap: svg('<path d="M26 16a10 10 0 1 1-3-7.1"/><path d="M26 5v5h-5"/>'),
     emom: svg('<path d="M5 14v-2a4 4 0 0 1 4-4h17M22 4l4 4-4 4M27 18v2a4 4 0 0 1-4 4H6M10 28l-4-4 4-4"/>'),
@@ -4165,6 +4194,36 @@ svg { overflow: visible; }
     return function () { alive = false; document.removeEventListener('visibilitychange', onVis); if (lock) lock.release().catch(function () {}); };
   }
 
+  function buildTicks(bezel) {
+    var NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), els = [], i;
+    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('class', 'ring-ticks'); svg.setAttribute('aria-hidden', 'true');
+    for (i = 0; i < 60; i++) {
+      var major = i % 5 === 0, a = i * Math.PI / 30, r1 = 47.6, r2 = major ? 39.8 : 43.2;
+      var l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', (50 + r1 * Math.sin(a)).toFixed(2)); l.setAttribute('y1', (50 - r1 * Math.cos(a)).toFixed(2));
+      l.setAttribute('x2', (50 + r2 * Math.sin(a)).toFixed(2)); l.setAttribute('y2', (50 - r2 * Math.cos(a)).toFixed(2));
+      l.setAttribute('stroke', 'currentColor'); l.setAttribute('stroke-width', major ? '1.3' : '0.85'); l.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(l); els.push(l);
+    }
+    bezel.insertBefore(svg, bezel.firstChild);
+    return els;
+  }
+  /* El círculo ocupa el mayor cuadrado posible del hueco; las cifras (tiempo arriba, rondas abajo) caben dentro */
+  function ringFit(stage, display, bezel) {
+    function fit() {
+      var D = Math.floor(Math.min(stage.clientWidth, stage.clientHeight)) - 6;
+      if (D < 80) return;
+      bezel.style.width = D + 'px'; bezel.style.height = D + 'px';
+      display.dataset.layout = 'col';
+      display.style.setProperty('--u', Math.max(0.2, Math.floor(Math.min(0.62 * D / 292, 0.44 * D / 218) * 100) / 100) + 'px');
+    }
+    fit();
+    var ro = window.ResizeObserver ? new window.ResizeObserver(fit) : null;
+    if (ro) ro.observe(stage);
+    window.addEventListener('resize', fit); window.addEventListener('orientationchange', fit);
+    return function () { if (ro) ro.disconnect(); window.removeEventListener('resize', fit); window.removeEventListener('orientationchange', fit); };
+  }
+
   function runShell(label, extraBlue, panel) {
     return '<div class="screen run" data-type="prep">' +
       '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button>' +
@@ -4218,6 +4277,7 @@ svg { overflow: visible; }
       controls += '<div class="rounds-bar"><button class="btn" id="minus" aria-label="Quitar una ronda">−</button>' +
         '<div class="r-label">Rondas</div><button class="btn plus" id="plus" aria-label="Sumar una ronda">+1</button></div>';
     }
+    controls += '<button class="btn small block bigbtn" id="bigclk">' + ICON.expand + 'Reloj grande</button>';
     controls += '<div class="controls"><button class="btn" id="reset">' + ICON.reset + 'Reiniciar</button>' +
       '<button class="btn primary main" id="pause">' + ICON.pause + '<span>Pausa</span></button>' +
       '<button class="btn danger" id="finish">' + ICON.stop + 'Terminar</button></div></div>';
@@ -4248,12 +4308,37 @@ svg { overflow: visible; }
 
     var run = $('.run');
     var blue = new window.LED($('#led-blue'), 'DD'), red = new window.LED($('#led-red'), 'DD:DD');
-    var startedAt, pausedTotal, pausedAt, prev, rounds, frozen, finished;
+    var startedAt, pausedTotal, pausedAt, prev, rounds, frozen, finished, ready = false;
+
+    /* Esfera circular (por defecto): círculo naranja con las rayas que se van consumiendo al ritmo del reloj */
+    var ringMode = settings.dial !== 'classic', ticks = null, lastTick = -1, segStart = [], lastRed = '', lastBlue = '', bigEl = null, bigRed = null, bigBlue = null, bigUnfit = null, bigOnResize = null;
+    (function () { var a = 0; plan.segments.forEach(function (sg) { segStart.push(a); a += sg.dur * 1000; }); })();
+    if (ringMode) { $('.stage').classList.add('ring'); ticks = buildTicks($('.bezel')); }
+    function fracLeft(cur, el) {
+      if (cur.phase === 'prep') return Math.max(0, 1 - el / (prep * 1000));
+      if (cur.phase === 'done') return 0;
+      var t = el - prep * 1000;
+      if (plan.kind === 'up') return plan.cap ? Math.max(0, 1 - t / (plan.cap * 1000)) : 1 - (t % 60000) / 60000;
+      var i = cur.segIndex;
+      if (i < 0 || !plan.segments[i]) return 0;
+      return Math.max(0, Math.min(1, 1 - (t - segStart[i]) / (plan.segments[i].dur * 1000)));
+    }
+    function setTicks(f) {
+      var n = Math.round(f * 600) / 10;
+      if (n === lastTick) return;
+      lastTick = n;
+      var full = Math.floor(n), part = n - full, first = 60 - full;
+      for (var i = 0; i < 60; i++) {
+        var o = i >= first ? 1 : (i === first - 1 ? Math.max(0.08, part) : 0.08);
+        ticks[i].setAttribute('opacity', o);
+      }
+    }
+    function setReadyBtn() { $('#pause').innerHTML = ICON.play + '<span>INICIAR</span>'; }
 
     function reset() {
-      startedAt = performance.now(); pausedTotal = 0; pausedAt = null; prev = null; rounds = 0; frozen = null; finished = false;
+      startedAt = performance.now(); pausedTotal = 0; pausedAt = startedAt; prev = null; rounds = 0; frozen = null; finished = false; ready = true; lastTick = -1;
       run.classList.remove('paused'); shareMode = false; armGuard(askLeave);
-      setPauseBtn(false);
+      setReadyBtn();
       $('#pause').disabled = false;
       markIdx = -2; markKind = '';
       if (typeof rewind === 'function') rewind();
@@ -4272,8 +4357,10 @@ svg { overflow: visible; }
     }
     function draw(cur) {
       run.dataset.type = cur.phase === 'run' ? (cur.type === 'rest' ? 'rest' : 'work') : cur.phase === 'done' ? 'done' : 'prep';
-      red.set(fmtDisplay(cur.display));
-      blue.set(pad(manual ? rounds : cur.round));
+      lastRed = fmtDisplay(cur.display); lastBlue = pad(manual ? rounds : cur.round);
+      red.set(lastRed); blue.set(lastBlue);
+      if (ticks) setTicks(fracLeft(cur, elapsed()));
+      if (bigEl) { bigEl.dataset.type = run.dataset.type; bigRed.set(lastRed); bigBlue.set(lastBlue); }
       var label = cur.label;
       if (cur.phase === 'run' && plan.kind === 'segments' && !manual && cur.type !== 'rest') {
         // Muestra "Ronda x de y" en los modos por rondas
@@ -4353,6 +4440,10 @@ svg { overflow: visible; }
 
     function togglePause() {
       if (finished) { if (shareMode) go('#/share'); return; }
+      if (ready) {
+        ready = false; Sound.unlock(); Sound.boop();
+        pausedTotal += performance.now() - pausedAt; pausedAt = null; setPauseBtn(false); rewind(); tick(); return;
+      }
       if (pausedAt === null) { pausedAt = performance.now(); run.classList.add('paused'); setPauseBtn(true); Sound.cancelAll(); }
       else { pausedTotal += performance.now() - pausedAt; pausedAt = null; run.classList.remove('paused'); setPauseBtn(false); rewind(); }
     }
@@ -4374,7 +4465,7 @@ svg { overflow: visible; }
     /* Salir del entreno: seguir, pausar y guardar para retomar, o salir del todo */
     function askLeave(target, opt) {
       var fin = opt && opt.finish !== undefined;
-      if (finished) { runGuard = null; go(target || '#/'); return; }
+      if (finished || ready) { runGuard = null; go(target || '#/'); return; }
       if (document.getElementById('leave-sheet')) return;
       var back = document.createElement('div');
       back.className = 'sheet-back'; back.id = 'leave-sheet';
@@ -4396,7 +4487,7 @@ svg { overflow: visible; }
     armGuard(askLeave);
     $('#exit').addEventListener('click', function () { if (history.length > 1) history.back(); else askLeave('#/'); });
     if (resume) {
-      startedAt = performance.now() - resume.elapsed; pausedAt = performance.now(); rounds = resume.rounds; resume = null;
+      ready = false; startedAt = performance.now() - resume.elapsed; pausedAt = performance.now(); rounds = resume.rounds; resume = null;
       run.classList.add('paused'); setPauseBtn(true); Sound.cancelAll(); rewind();
       prev = T.stateAt(plan, prep, elapsed()); tick();
     }
@@ -4406,12 +4497,49 @@ svg { overflow: visible; }
       $('#minus').addEventListener('click', function () { add(-1); });
       $('#led-blue').addEventListener('click', function () { add(1); });
     }
+    var unring = ringMode ? ringFit($('.stage'), $('.display'), $('.bezel')) : null;
+    if (ringMode) { unfit(); unfit = unring; }
+
+    /* Reloj grande: solo el reloj y las rondas, a pantalla completa y en horizontal */
+    function openBig() {
+      if (bigEl) return;
+      var o = document.createElement('div');
+      o.className = 'bigclk'; o.id = 'bigclk-o'; o.dataset.type = run.dataset.type;
+      o.innerHTML = '<button class="bigx" id="bigx" aria-label="Cerrar reloj grande">✕</button><div class="stage"><div class="bezel"><div class="display">' +
+        '<div class="led" id="big-blue" role="img" aria-label="Rondas"></div><div class="led" id="big-red" role="img" aria-label="Tiempo"></div></div></div></div>';
+      document.body.appendChild(o); bigEl = o;
+      bigRed = new window.LED(o.querySelector('#big-red'), 'DD:DD'); bigBlue = new window.LED(o.querySelector('#big-blue'), 'DD');
+      bigRed.set(lastRed || '00:00'); bigBlue.set(lastBlue || '00');
+      bigUnfit = window.LED.autoFit(o.querySelector('.stage'), o.querySelector('.display'), o.querySelector('.bezel'));
+      o.querySelector('#bigx').addEventListener('click', closeBig);
+      if (manual) o.querySelector('#big-blue').addEventListener('click', function () { add(1); });
+      bigOnResize = function () { o.classList.toggle('rot', window.innerHeight > window.innerWidth); };
+      window.addEventListener('resize', bigOnResize);
+      try {
+        var fs = document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null;
+        Promise.resolve(fs).catch(function () {}).then(function () {
+          var lk = window.screen && screen.orientation && screen.orientation.lock ? screen.orientation.lock('landscape') : null;
+          return Promise.resolve(lk).catch(function () {});
+        }).then(function () { setTimeout(bigOnResize, 350); });
+      } catch (e) {}
+      bigOnResize();
+    }
+    function closeBig() {
+      if (!bigEl) return;
+      window.removeEventListener('resize', bigOnResize);
+      if (bigUnfit) bigUnfit();
+      bigEl.remove(); bigEl = null;
+      try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); if (window.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+    }
+    $('#bigclk').addEventListener('click', openBig);
+
     function onKey(e) {
+      if (e.code === 'Escape' && bigEl) { closeBig(); return; }
       if (e.code === 'Space') { e.preventDefault(); togglePause(); }
       else if (manual && (e.key === '+' || e.key === 'ArrowUp')) { rounds = Math.min(99, rounds + 1); tick(); }
     }
     document.addEventListener('keydown', onKey);
-    cleanup = function () { runGuard = null; var ls = document.getElementById('leave-sheet'); if (ls) ls.remove(); clearInterval(iv); Sound.cancelAll(); wl(); unfit(); document.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVisible); };
+    cleanup = function () { runGuard = null; closeBig(); var ls = document.getElementById('leave-sheet'); if (ls) ls.remove(); clearInterval(iv); Sound.cancelAll(); wl(); unfit(); document.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVisible); };
   }
 
   /* ---------- Compartir (Instagram, etc.) ---------- */
@@ -4624,6 +4752,8 @@ svg { overflow: visible; }
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
+      '<div class="panel"><h2>Reloj</h2><div class="field"><div class="flabel">Esfera del reloj</div><select class="text-in" id="dial">' +
+      '<option value="ring"' + (s.dial !== 'classic' ? ' selected' : '') + '>Esfera circular (por defecto)</option><option value="classic"' + (s.dial === 'classic' ? ' selected' : '') + '>Esfera clásica</option></select></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
       '<p class="s-hint">Para saber qué toca sin mirar la pantalla: pitido corto y agudo = trabajo, tono largo y grave = descanso, vibración distinta en cada caso.</p>' +
       '<button class="btn small block" id="snd-access" style="margin-bottom:10px">Aplicar sonidos distintos por tipo (recomendado)</button>' + sounds + '<div id="snd-msg" class="s-hint" role="status"></div></div>' +
@@ -4637,6 +4767,7 @@ svg { overflow: visible; }
     function onChange(e) {
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
+      else if (t.id === 'dial') Store.setSettings({ dial: t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }

@@ -41,6 +41,7 @@ const www = path.join(__dirname, '..', 'www');
   assert.strictEqual(titles.length, 15);
 
   // ---- Config: solo Empezar (sin guardar) ----
+  const ini = async () => { if ($('#pause') && /INICIAR/.test($('#pause').textContent)) { click($('#pause')); await tick(30); } };
   await go('#/config/amrap');
   assert.ok($('#start') && !$('#save') && !$('#name'));
   w.Store.setSettings({ prep: 3 });
@@ -49,6 +50,12 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok($('#plus') && $('#minus') && $('#pause'));
   await tick(200);
   assert.strictEqual($('#phase').textContent, 'Preparados');
+  assert.ok(/INICIAR/.test($('#pause').textContent), 'espera a pulsar INICIAR');
+  const b0 = $('#led-red').innerHTML; await tick(1300);
+  assert.strictEqual($('#led-red').innerHTML, b0, 'no arranca solo');
+  assert.ok($('.stage.ring') && $$('.ring-ticks line').length === 60, 'esfera circular por defecto con 60 rayas');
+  click($('#pause')); await tick(1100);
+  assert.ok($('#led-red').innerHTML !== b0, 'al pulsar INICIAR corre la cuenta atrás');
   click($('#pause')); await tick(30);
   const before = $('#led-red').innerHTML;
   await tick(1300);
@@ -123,7 +130,7 @@ const www = path.join(__dirname, '..', 'www');
   assert.strictEqual(mine.lines[0].parts[0].ex, 'rest');
   assert.strictEqual(JSON.stringify(mine.lines[1].parts.map(p => p.ex + ':' + p.qty)), '["back-squat:10","run:200 m"]');
   // se puede arrancar
-  click($(`[data-prun="${mine.id}"]`)); await tick(40);
+  click($(`[data-prun="${mine.id}"]`)); await tick(40); await ini();
   assert.strictEqual(w.location.hash, '#/run');
   assert.ok(!$('#plus'), 'EMOM: ronda automática');
   // editar y borrar
@@ -136,7 +143,7 @@ const www = path.join(__dirname, '..', 'www');
   // ---- EMOM con ejercicios: aparecen en pantalla y el rojo salta cada minuto ----
   w.Store.setSettings({ prep: 0 });
   await go('#/presets/emom');
-  click($('[data-prun="p7"]')); await tick(80);            // EMOM 12' · Back squat / Bike / Run / Rest
+  click($('[data-prun="p7"]')); await tick(80); await ini();          // EMOM 12' · Back squat / Bike / Run / Rest
   assert.ok($('.ex-panel'), 'los ejercicios salen en el reloj');
   assert.strictEqual($$('.ex-panel .ex-line').length, 4);
   assert.ok($('.ex-panel [data-info="back-squat"]'), 'con su (i)');
@@ -150,7 +157,7 @@ const www = path.join(__dirname, '..', 'www');
   // los 3 botones del reloj existen (Pausa, Reiniciar, Terminar)
   assert.ok($('#pause') && $('#reset') && $('#finish'));
   // AMRAP con ejercicios: se ven pero no hay resaltado
-  await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80);
+  await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80); await ini();
   assert.strictEqual($$('.ex-panel .ex-line').length, 5); assert.strictEqual($$('.ex-line.now').length, 0);
 
   // ---- Error: EMOM de 5 min con 6 ejercicios ----
@@ -191,7 +198,7 @@ const www = path.join(__dirname, '..', 'www');
   // ---- Compartir: AMRAP (rondas) y For Time (tiempo) ----
   const calls = [];
   w.Share.render = (cv, o) => { calls.push(o); return Promise.resolve(cv); }; w.Share.renderThumb = () => Promise.resolve();
-  await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80);   // AMRAP 20'
+  await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80); await ini();   // AMRAP 20'
   click($('#plus')); click($('#plus')); click($('#plus')); await tick(80);
   assert.ok(/Pausa/.test($('#pause').textContent));
   offset += 1201000; await tick(150);                       // se acaba el AMRAP
@@ -236,7 +243,7 @@ const www = path.join(__dirname, '..', 'www');
   ptr('pointerdown', 500, 40); ptr('pointermove', 100, 40); ptr('pointerup', 100, 40); await tick(20);
   click($('.top [data-nav]')); await tick(40); assert.ok(!$('.run'), 'volver no reinicia el reloj');
 
-  await go('#/'); await go('#/presets/partners'); click($('[data-prun="p3"]')); await tick(80);   // For Time
+  await go('#/'); await go('#/presets/partners'); click($('[data-prun="p3"]')); await tick(80); await ini();   // For Time
   offset += 754000; await tick(80);
   click($('#finish')); await tick(40); assert.ok($('#leave-sheet')); click($('#lv-exit')); await tick(100);
   assert.ok(/Compartir/.test($('#pause').textContent));
@@ -244,7 +251,7 @@ const www = path.join(__dirname, '..', 'www');
   o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'time'); assert.ok(Math.abs(o.r.value - 754) <= 2, 'tiempo realizado ' + o.r.value);
   assert.strictEqual(o.r.modeName, 'FOR TIME');
-  await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(80);   // EMOM 12'
+  await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(80); await ini();   // EMOM 12'
   offset += 200000; await tick(80); click($('#finish')); await tick(40); click($('#lv-exit')); await tick(100); click($('#pause')); await tick(60);
   o = calls[calls.length - 1];
   assert.strictEqual(o.r.kind, 'text'); assert.strictEqual(o.r.value, "EMOM 12'"); assert.strictEqual(o.r.lines.length, 3);
@@ -268,7 +275,7 @@ const www = path.join(__dirname, '..', 'www');
   let hist = w.Store.history();
   assert.ok(hist.length >= 3, 'los entrenos terminados se guardan solos: ' + hist.length);
   const am = hist.filter(h => h.modeId === 'amrap' && h.presetId === 'p2'); assert.strictEqual(am.length, 1); assert.strictEqual(am[0].value, 3); assert.strictEqual(am[0].pr, false, 'la primera vez no es PR');
-  await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80);
+  await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(80); await ini();
   for (let i = 0; i < 5; i++) click($('#plus'));
   offset += 1201000; await tick(150);
   const am2 = w.Store.history().filter(h => h.presetId === 'p2'); assert.strictEqual(am2.length, 2); assert.strictEqual(am2[1].value, 5); assert.strictEqual(am2[1].pr, true, '5 rondas > 3 rondas = PR');
