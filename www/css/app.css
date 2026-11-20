@@ -456,3 +456,8 @@ svg { overflow: visible; }
 .bigb#bigx { color: var(--muted); }
 .bigclk.paused #big-red { animation: blink 1s steps(2, jump-none) infinite; }
 .bigclk.rot { inset: auto; top: 0; left: 100vw; width: 100vh; height: 100vw; transform-origin: top left; transform: rotate(90deg); }
+
+.bigfoot { display: flex; align-items: center; justify-content: center; gap: 14px; flex: 0 0 auto; padding: 4px 0 2px; }
+.bigfoot .btn { min-height: 60px; font-size: 38px; font-style: normal; min-width: 84px; }
+.bigfoot .btn.plus { min-width: 180px; background: var(--blue); border-color: var(--blue); color: #fff; }
+.bigrl { font-weight: 800; font-style: italic; font-size: 26px; color: var(--blue); min-width: 90px; text-align: center; }

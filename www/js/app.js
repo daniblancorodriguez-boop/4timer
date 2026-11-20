@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.6.2';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.6.3';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -851,7 +851,8 @@
       var o = document.createElement('div');
       o.className = 'bigclk'; o.id = 'bigclk-o'; o.dataset.type = run.dataset.type;
       o.innerHTML = '<div class="bigtop"><div class="bigphase" id="big-phase"></div><div class="bigbtns"><button class="bigb" id="bigpp"></button><button class="bigb" id="bigx" aria-label="Cerrar reloj grande">✕</button></div></div><div class="stage"><div class="bezel"><div class="display">' +
-        '<div class="led" id="big-blue" role="img" aria-label="Rondas"></div><div class="led" id="big-red" role="img" aria-label="Tiempo"></div></div></div></div>';
+        '<div class="led" id="big-blue" role="img" aria-label="Rondas"></div><div class="led" id="big-red" role="img" aria-label="Tiempo"></div></div></div></div>' +
+        (manual ? '<div class="bigfoot"><button class="btn" id="bigminus" aria-label="Quitar una ronda">−</button><div class="bigrl">Rondas</div><button class="btn plus" id="bigplus" aria-label="Sumar una ronda">+1</button></div>' : '');
       document.body.appendChild(o); bigEl = o;
       bigRed = new window.LED(o.querySelector('#big-red'), 'DD:DD'); bigBlue = new window.LED(o.querySelector('#big-blue'), 'DD');
       bigRed.set(lastRed || '00:00'); bigBlue.set(lastBlue || '00');
@@ -859,7 +860,11 @@
       o.querySelector('#bigx').addEventListener('click', closeBig);
       o.querySelector('#bigpp').addEventListener('click', function () { togglePause(); });
       bigSync();
-      if (manual) o.querySelector('#big-blue').addEventListener('click', function () { add(1); });
+      if (manual) {
+        o.querySelector('#big-blue').addEventListener('click', function () { add(1); });
+        o.querySelector('#bigplus').addEventListener('click', function () { add(1); });
+        o.querySelector('#bigminus').addEventListener('click', function () { add(-1); });
+      }
       bigOnResize = function () { o.classList.toggle('rot', window.innerHeight > window.innerWidth); };
       window.addEventListener('resize', bigOnResize);
       try {
