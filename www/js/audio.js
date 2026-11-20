@@ -78,7 +78,7 @@
 
   /* Voces: archivos audio/half.mp3 y audio/welldone.mp3 (voz real). Si no están, voz robótica del móvil. */
   var VOICES = {
-    half:     { file: 'audio/half.mp3',     text: 'Mitad del tiempo superada', lang: 'es-ES' },
+    half:     { file: 'audio/half.mp3',     text: 'Half time!',                lang: 'en-US' },
     welldone: { file: 'audio/welldone.mp3', text: 'Well done!',                lang: 'en-US' }
   };
   var START = 'audio/start.mp3', START_LEAD = 3.02; // 3 pitidos cortos (s 0,1,2) y uno largo a los 3,02 s
