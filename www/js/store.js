@@ -58,7 +58,12 @@
       { id: 'p16', name: "A · AMRAP 17' · Front squat / Pull ups / Wallclimb", mode: 'amrap', cfg: { dur: 1020 }, numbered: false, lines: [
         L([ex('pause-front-squat', '5')]), L([ex('ecc-pull-ups', '5')]), L([ex('wallclimb-box-obstacles', '5')])] },
       { id: 'p17', name: "B · 5R For Time (TC 20') · Bike / Swing / Ski", mode: 'fortime', cfg: { cap: 1200 }, numbered: false, lines: [
-        X('5 rondas'), L([ex('cal-bike', '12')]), L([ex('american-swing', '25')]), L([ex('ski', '200 m')])] }
+        X('5 rondas'), L([ex('cal-bike', '12')]), L([ex('american-swing', '25')]), L([ex('ski', '200 m')])] },
+      { id: 'p18', name: "A · AMRAP 40' en parejas · Sled push / Ski / DB snatch / Wall balls", mode: 'amrap', cfg: { dur: 2400 }, numbered: false, lines: [
+        X('Formato: parejas'),
+        X('Ronda 1'), L([ex('sled-push', '10')]), L([ex('ski', '300 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '30')]),
+        X('Ronda 2'), L([ex('sled-push', '8')]), L([ex('ski', '600 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '40')]),
+        X('Ronda 3'), L([ex('sled-push', '6')]), L([ex('ski', '900 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '50')])] }
     ];
   }
 
@@ -112,7 +117,7 @@
   }
 
   var OLD_P = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10'];
-  var NEW_E = ['kb-rdl-row', 'quadruped-pull-rack', 'muscle-ups', 'squat-jumps', 'burpees-broad-jump', 'pause-front-squat', 'ecc-pull-ups', 'wallclimb-box-obstacles'];
+  var NEW_E = ['kb-rdl-row', 'quadruped-pull-rack', 'muscle-ups', 'squat-jumps', 'burpees-broad-jump', 'pause-front-squat', 'ecc-pull-ups', 'wallclimb-box-obstacles', 'wall-balls', 'db-snatch'];
   function seedsSeenNow() { return { p: seedPresets().map(function (x) { return x.id; }), e: (root.SEED_EXERCISES || []).map(function (x) { return x.id; }) }; }
   var data;
   function load() {

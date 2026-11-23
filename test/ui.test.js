@@ -90,7 +90,7 @@ const www = path.join(__dirname, '..', 'www');
   assert.strictEqual(w.location.hash, '#/presets/emom');
   assert.strictEqual($$('.preset').length, 7);
   assert.ok($$('.p-name').every(n => !/partner/i.test(n.textContent)));
-  await go('#/presets/partners'); assert.strictEqual($$('.preset').length, 5);
+  await go('#/presets/partners'); assert.strictEqual($$('.preset').length, 6);
   await go('#/presets/amrap'); assert.strictEqual($$('.preset').length, 3);
   await go('#/presets/emom');
   const info = $('[data-info="back-squat"]');

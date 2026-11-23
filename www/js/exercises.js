@@ -33,6 +33,8 @@
     { id: 'db-bench-row', name: 'DB bench row', desc: 'Remo con mancuerna apoyando el pecho, o una mano y una rodilla, sobre un banco; tiras de la mancuerna hacia la cadera. Se suele indicar por lado (por ejemplo 6+6).' },
     { id: 'back-squat', name: 'Back squat', desc: 'Sentadilla trasera: con la barra apoyada en la parte alta de la espalda, bajas flexionando cadera y rodillas y subes. Trabaja piernas y glúteos.' },
     { id: 'sprint-bike', name: 'Sprint bike', desc: 'Sprint en bicicleta de aire a máxima intensidad durante el tiempo indicado.' },
+    { id: 'wall-balls', name: 'Wall balls', desc: 'Sentadilla con un balón medicinal en las manos y, al subir, lanzamiento del balón a una diana en la pared, recogiéndolo al caer para encadenar la siguiente repetición. Trabaja piernas, hombros y core.' },
+    { id: 'db-snatch', name: 'DB snatch', desc: 'Arrancada con una mancuerna: desde el suelo la llevas por encima de la cabeza en un solo movimiento explosivo, con extensión de cadera y el brazo estirado arriba. Se alterna el brazo en cada repetición o por series.' },
     { id: 'sprint-ski', name: 'Sprint ski', desc: 'Sprint en la máquina de esquí (SkiErg) a máxima intensidad durante el tiempo indicado.' },
     { id: 'ski', name: 'Ski', desc: 'SkiErg: máquina que simula el esquí de fondo; tiras de dos asas hacia abajo con brazos, espalda y core. Se mide por distancia (por ejemplo 200 m).' },
     { id: 'strict-pull-ups', name: 'Strict pull ups', desc: 'Dominadas estrictas: subes la barbilla por encima de la barra solo con la fuerza de espalda y brazos, sin balanceo ni impulso.' },
