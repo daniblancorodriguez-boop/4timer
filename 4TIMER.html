@@ -473,6 +473,30 @@ svg { overflow: visible; }
 .bigfoot .btn.plus { min-width: 180px; background: var(--blue); border-color: var(--blue); color: #fff; }
 .bigrl { font-weight: 800; font-style: italic; font-size: 26px; color: var(--blue); min-width: 90px; text-align: center; }
 
+/* ---------- Historial: buscador y calendario ---------- */
+.h-search { margin: 0 0 12px; }
+.h-search .text-in { width: 100%; }
+.h-sec { font-size: 26px; font-style: italic; font-weight: 800; margin: 16px 0 8px; }
+.cal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-title { font-weight: 800; font-style: italic; font-size: 26px; text-transform: capitalize; }
+.cal-head .icon-btn { width: 44px; height: 44px; font-size: 28px; line-height: 1; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-w { text-align: center; color: var(--muted); font-size: 16px; font-weight: 700; padding: 2px 0; }
+.cal-d { position: relative; aspect-ratio: 1; min-height: 40px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--chalk); font-size: 20px; font-weight: 700; padding: 0; }
+.cal-d.out { pointer-events: none; }
+.cal-d.today { border-color: var(--line); background: var(--panel-2); }
+.cal-d.sel { border-color: var(--orange); background: rgba(245, 146, 30, .14); }
+.cal-d.has::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 6px rgba(245, 146, 30, .7); }
+.cal-day { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.cal-day-t { font-weight: 800; font-size: 22px; margin-bottom: 6px; }
+.cal-none { color: var(--muted); font-size: 19px; }
+.cal-e { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.cal-e:last-child { border-bottom: 0; }
+.cal-e-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal-e-sub { display: flex; justify-content: space-between; margin-top: 2px; color: var(--muted); font-size: 20px; }
+.cal-e-sub .h-val { color: var(--chalk); font-weight: 800; }
+
 </style>
 </head>
 <body>
@@ -3685,7 +3709,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.6.5';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.7.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -4677,48 +4701,105 @@ svg { overflow: visible; }
     return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><polyline points="' + d + '" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
   function viewHistory() {
-    var all = Store.history(), groups = {}, order = [];
-    all.forEach(function (h) { if (!groups[h.key]) { groups[h.key] = []; order.push(h.key); } groups[h.key].push(h); });
-    order.sort(function (a, b) { return groups[b][groups[b].length - 1].ts - groups[a][groups[a].length - 1].ts; });
-    var html = '<div class="screen">' + header('Historial') +
-      '<p class="lead">Se guarda solo al terminar cada entreno. Toca uno para ver sus pruebas: cada una se puede compartir o borrar con la papelera.</p>';
-    if (!order.length) html += '<div class="empty">Todavía no hay resultados. Termina un entreno y aparecerá aquí.</div>';
-    order.forEach(function (k) {
-      var list = groups[k].slice().sort(function (a, b) { return a.ts - b.ts; }), last = list[list.length - 1];
-      var scored = list.filter(function (h) { return Store.score(h); }), best = null;
-      scored.forEach(function (h) { if (!best || Store.score(h).dir * Store.score(h).v > Store.score(best).dir * Store.score(best).v) best = h; });
-      html += '<details class="hist-g"' + (list.length === 1 ? ' open' : '') + '><summary><div class="h-top"><span class="h-name">' + esc(last.name) + '</span><span class="chip">' + esc(last.modeName) + '</span></div>' +
-        '<div class="h-sub"><span>' + list.length + (list.length === 1 ? ' vez' : ' veces') + '</span>' +
-        (best ? '<span class="h-pr">' + ICON.trophy + valText(best) + '</span>' : '') + '<span class="h-spark">' + spark(list) + '</span></div></summary><div class="h-body">';
-      list.slice().reverse().forEach(function (h) {
-        var idx = list.indexOf(h), prevH = null;
-        for (var j = idx - 1; j >= 0; j--) if (Store.score(list[j])) { prevH = list[j]; break; }
-        html += '<div class="h-row"><span class="h-date">' + esc(dateEs(h.ts)) + '</span><span class="h-val">' + esc(valText(h)) + ((h === best || (h.modeId === 'run' && h.pr)) ? ' <b class="pr-tag">PR</b>' : '') + '</span>' +
-          deltaHtml(h, prevH) +
-          (h.modeId === 'run' && h.route ? '<button class="icon-btn mini" data-hgpx="' + h.id + '" aria-label="Exportar GPX">' + ICON.download + '</button>' : '') +
-          '<button class="icon-btn mini" data-hshare="' + h.id + '" aria-label="Compartir este resultado">' + ICON.share + '</button>' +
-          '<button class="icon-btn mini" data-hdel="' + h.id + '" aria-label="Borrar este resultado">' + ICON.trash + '</button></div>';
+    var MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    var q = '', selDay = null, now0 = new Date(), mY = now0.getFullYear(), mM = now0.getMonth(), all = [];
+    function nrm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+    function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    function hay(h) {
+      return nrm([h.name, h.modeName, h.modeId].concat((h.lines || []).map(function (l) {
+        return (l.parts || []).map(function (pt) { return pt.name; }).join(' ') + ' ' + (l.note || '');
+      })).join(' '));
+    }
+    function filtered() {
+      var words = nrm(q).split(/\s+/).filter(Boolean);
+      if (!words.length) return all;
+      return all.filter(function (h) { var t = hay(h); return words.every(function (w) { return t.indexOf(w) > -1; }); });
+    }
+    function calendarHtml(list) {
+      var byDay = {};
+      list.forEach(function (h) { var k = dayKey(h.ts); byDay[k] = (byDay[k] || 0) + 1; });
+      var first = new Date(mY, mM, 1), lead = (first.getDay() + 6) % 7, days = new Date(mY, mM + 1, 0).getDate(), todayK = dayKey(Date.now());
+      var out = '<div class="cal"><div class="cal-head"><button class="icon-btn mini" data-cal="-1" aria-label="Mes anterior">‹</button>' +
+        '<div class="cal-title">' + MONTHS[mM] + ' ' + mY + '</div><button class="icon-btn mini" data-cal="1" aria-label="Mes siguiente">›</button></div>' +
+        '<div class="cal-grid">' + ['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(function (d) { return '<div class="cal-w">' + d + '</div>'; }).join('');
+      for (var i = 0; i < lead; i++) out += '<div class="cal-d out"></div>';
+      for (var d = 1; d <= days; d++) {
+        var k = mY + '-' + pad(mM + 1) + '-' + pad(d), n = byDay[k] || 0;
+        out += '<button class="cal-d' + (n ? ' has' : '') + (k === todayK ? ' today' : '') + (k === selDay ? ' sel' : '') + '" data-day="' + k + '"' +
+          ' aria-label="' + d + ' de ' + MONTHS[mM] + (n ? ': ' + n + (n === 1 ? ' entreno' : ' entrenos') : '') + '">' + d + '</button>';
+      }
+      out += '</div>';
+      if (selDay) {
+        var ds = list.filter(function (h) { return dayKey(h.ts) === selDay; }).sort(function (x, y) { return x.ts - y.ts; });
+        var p = selDay.split('-');
+        out += '<div class="cal-day"><div class="cal-day-t">' + (+p[2]) + ' de ' + MONTHS[+p[1] - 1] + '</div>';
+        if (!ds.length) out += '<div class="cal-none">Ese día no hay entrenos' + (q ? ' con este filtro' : '') + '.</div>';
+        ds.forEach(function (h) {
+          var dt = new Date(h.ts);
+          out += '<div class="cal-e"><div class="cal-e-top"><span class="h-name">' + esc(h.name) + '</span><span class="chip">' + esc(h.modeName) + '</span></div>' +
+            '<div class="cal-e-sub"><span class="h-val">' + esc(valText(h)) + (h.pr ? ' <b class="pr-tag">PR</b>' : '') + '</span><span class="h-date">' + pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + '</span></div></div>';
+        });
+        out += '</div>';
+      }
+      return out + '</div>';
+    }
+    function listHtml(list) {
+      var groups = {}, order = [], html = '';
+      list.forEach(function (h) { if (!groups[h.key]) { groups[h.key] = []; order.push(h.key); } groups[h.key].push(h); });
+      order.sort(function (a, b) { return groups[b][groups[b].length - 1].ts - groups[a][groups[a].length - 1].ts; });
+      if (!all.length) return '<div class="empty">Todavía no hay resultados. Termina un entreno y aparecerá aquí.</div>';
+      if (!order.length) return '<div class="empty">No hay entrenos que coincidan con «' + esc(q) + '».</div>';
+      order.forEach(function (k) {
+        var items = groups[k].slice().sort(function (a, b) { return a.ts - b.ts; }), last = items[items.length - 1];
+        var scored = items.filter(function (h) { return Store.score(h); }), best = null;
+        scored.forEach(function (h) { if (!best || Store.score(h).dir * Store.score(h).v > Store.score(best).dir * Store.score(best).v) best = h; });
+        html += '<details class="hist-g"' + (items.length === 1 ? ' open' : '') + '><summary><div class="h-top"><span class="h-name">' + esc(last.name) + '</span><span class="chip">' + esc(last.modeName) + '</span></div>' +
+          '<div class="h-sub"><span>' + items.length + (items.length === 1 ? ' vez' : ' veces') + '</span>' +
+          (best ? '<span class="h-pr">' + ICON.trophy + valText(best) + '</span>' : '') + '<span class="h-spark">' + spark(items) + '</span></div></summary><div class="h-body">';
+        items.slice().reverse().forEach(function (h) {
+          var idx = items.indexOf(h), prevH = null;
+          for (var j = idx - 1; j >= 0; j--) if (Store.score(items[j])) { prevH = items[j]; break; }
+          html += '<div class="h-row"><span class="h-date">' + esc(dateEs(h.ts)) + '</span><span class="h-val">' + esc(valText(h)) + ((h === best || (h.modeId === 'run' && h.pr)) ? ' <b class="pr-tag">PR</b>' : '') + '</span>' +
+            deltaHtml(h, prevH) +
+            (h.modeId === 'run' && h.route ? '<button class="icon-btn mini" data-hgpx="' + h.id + '" aria-label="Exportar GPX">' + ICON.download + '</button>' : '') +
+            '<button class="icon-btn mini" data-hshare="' + h.id + '" aria-label="Compartir este resultado">' + ICON.share + '</button>' +
+            '<button class="icon-btn mini" data-hdel="' + h.id + '" aria-label="Borrar este resultado">' + ICON.trash + '</button></div>';
+        });
+        if (last.presetId && Store.getPreset(last.presetId)) html += '<button class="btn primary small block" data-hrep="' + last.presetId + '" style="margin-top:8px">' + ICON.play + 'Repetir este entreno</button>';
+        html += '</div></details>';
       });
-      if (last.presetId && Store.getPreset(last.presetId)) html += '<button class="btn primary small block" data-hrep="' + last.presetId + '" style="margin-top:8px">' + ICON.play + 'Repetir este entreno</button>';
-      html += '</div></details>';
-    });
-    if (order.length) html += '<button class="btn small block" id="h-clear" style="margin-top:10px">Borrar todo el historial</button>';
-    app.innerHTML = html + '</div>';
-    var open = {};
+      return html;
+    }
+    function refresh() {
+      all = Store.history();
+      var list = filtered();
+      $('#h-main').innerHTML = calendarHtml(list) + '<h2 class="h-sec">Historial</h2>' + listHtml(list) +
+        (all.length ? '<button class="btn small block" id="h-clear" style="margin-top:10px">Borrar todo el historial</button>' : '');
+    }
+    app.innerHTML = '<div class="screen">' + header('Historial') +
+      '<div class="h-search"><input class="text-in" id="h-q" type="search" placeholder="Buscar por tipo de entreno o ejercicio" autocomplete="off" aria-label="Buscar en el historial"></div>' +
+      '<div id="h-main"></div></div>';
+    refresh();
+    function onInput(e) { if (e.target.id === 'h-q') { q = e.target.value; refresh(); } }
     function onClick(e) {
+      var cm = e.target.closest('[data-cal]');
+      if (cm) { mM += +cm.dataset.cal; if (mM < 0) { mM = 11; mY--; } else if (mM > 11) { mM = 0; mY++; } selDay = null; refresh(); return; }
+      var cd = e.target.closest('[data-day]');
+      if (cd) { selDay = selDay === cd.dataset.day ? null : cd.dataset.day; refresh(); return; }
       var gx = e.target.closest('[data-hgpx]'); if (gx) { var gh = all.filter(function (x) { return x.id === gx.dataset.hgpx; })[0]; if (gh) window.RunUI.saveGPX(gh); return; }
       var sh = e.target.closest('[data-hshare]'), dl = e.target.closest('[data-hdel]'), rp = e.target.closest('[data-hrep]');
       if (sh) { var h = all.filter(function (x) { return x.id === sh.dataset.hshare; })[0]; if (h) { lastResult = h; go('#/share'); } }
-      else if (dl) { if (window.confirm('¿Borrar este resultado?')) { Store.removeResult(dl.dataset.hdel); viewHistory(); } }
+      else if (dl) { if (window.confirm('¿Borrar este resultado?')) { Store.removeResult(dl.dataset.hdel); refresh(); } }
       else if (rp) {
         var it = Store.getPreset(rp.dataset.hrep); if (!it) return;
         var err = T.validateLines(it.mode, it.cfg, it.lines); if (err) { toast('Error: ' + err); return; }
         pending = { mode: it.mode, cfg: Object.assign(T.defaultConfig(it.mode), it.cfg), name: it.name, lines: it.lines, numbered: !!it.numbered, presetId: it.id };
         Sound.unlock(); go('#/run');
-      } else if (e.target.closest('#h-clear')) { if (window.confirm('¿Borrar TODO el historial?')) { Store.clearHistory(); viewHistory(); } }
+      } else if (e.target.closest('#h-clear')) { if (window.confirm('¿Borrar TODO el historial?')) { Store.clearHistory(); refresh(); } }
     }
     app.addEventListener('click', onClick);
-    cleanup = function () { app.removeEventListener('click', onClick); };
+    app.addEventListener('input', onInput);
+    cleanup = function () { app.removeEventListener('click', onClick); app.removeEventListener('input', onInput); };
   }
 
   /* ---------- Ajustes ---------- */
