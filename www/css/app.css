@@ -492,3 +492,11 @@ svg { overflow: visible; }
 .pz-row .switch { flex: 1; min-width: 0; margin: 0; }
 .pz-row .btn.small { flex: 0 0 auto; width: 44px; min-width: 44px; padding: 0; }
 .pz-row .btn.small[disabled] { opacity: .3; }
+
+/* Inicio limpio: descripción en un botón «i» */
+.cardwrap { position: relative; }
+.cardwrap .card { width: 100%; padding-right: 60px; }
+.info-btn { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: #2b2b2f; font: italic 800 22px/1 Georgia, 'Times New Roman', serif; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+.info-btn.on { background: #2b2b2f; color: #fff; }
+.info-box { margin: 6px 4px 0; padding: 12px 14px; background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 14px; font-size: 18px; line-height: 1.25; }
+.info-box[hidden] { display: none; }

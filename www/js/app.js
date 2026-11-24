@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.8.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -128,7 +128,9 @@
 
   /* ---------- Bloques de la pantalla de inicio (se pueden ocultar y reordenar en Ajustes → Personalización) ---------- */
   function homeCard(nav, icon, title, desc, cls) {
-    return '<button class="card' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span>' + icon + '</span><span><span class="c-title">' + esc(title) + '</span><span class="c-desc">' + esc(desc) + '</span></span></button>';
+    return '<div class="cardwrap"><button class="card' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span>' + icon + '</span><span><span class="c-title">' + esc(title) + '</span></span></button>' +
+      '<button class="info-btn" data-info aria-label="Qué es: ' + esc(title) + '" aria-expanded="false">i</button>' +
+      '<p class="info-box" hidden>' + esc(desc) + '</p></div>';
   }
   function homeBlocks() {
     var b = [{ id: 'presets', name: 'Entrenamientos predefinidos', html: homeCard('#/presets', ICON.presets, 'Entrenamientos predefinidos', 'Los entrenos del box con el tiempo ya configurado. Toca y empieza, o crea el tuyo.', 'accent') }];
@@ -167,6 +169,14 @@
     var shown = blocks.filter(function (x) { return hid.indexOf(x.id) < 0; });
     (shown.length ? shown : blocks).forEach(function (x) { html += '<li>' + x.html + '</li>'; });
     app.innerHTML = html + '</ul></div>';
+    function onInfo(e) {
+      var ib = e.target.closest('[data-info]');
+      if (!ib) return;
+      var box = ib.parentNode.querySelector('.info-box'), open = box.hidden;
+      box.hidden = !open; ib.setAttribute('aria-expanded', open ? 'true' : 'false'); ib.classList.toggle('on', open);
+    }
+    app.addEventListener('click', onInfo);
+    cleanup = function () { app.removeEventListener('click', onInfo); };
     if (sess) {
       $('#resume-btn').addEventListener('click', function () {
         pending = sess.pending; resume = { elapsed: sess.elapsed, rounds: sess.rounds || 0 };

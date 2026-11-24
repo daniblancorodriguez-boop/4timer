@@ -337,6 +337,15 @@ const www = path.join(__dirname, '..', 'www');
   assert.strictEqual(JSON.stringify(homeTitles()), JSON.stringify(pzBefore), 'restaurar devuelve el orden original');
   console.log('Personalización OK');
 
+  // ---- Botón «i» en el inicio ----
+  await go('#/');
+  assert.ok(!$$('.modes .c-desc').length || $$('.modes .cardwrap').length > 5, 'inicio sin descripciones fijas');
+  const ib = $('.cardwrap [data-info]'), box = ib.parentNode.querySelector('.info-box');
+  assert.ok(box.hidden && box.textContent.length > 10);
+  ib.click(); assert.ok(!box.hidden, 'la i despliega la explicación');
+  ib.click(); assert.ok(box.hidden, 'la i la oculta');
+  console.log('Botón i OK');
+
   // ---- Migración: datos de la versión anterior (solo texto) ----
   const old = { presets: [
     { id: 'p2', name: 'viejo', mode: 'amrap', cfg: { dur: 1200 }, desc: 'x' },

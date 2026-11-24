@@ -504,6 +504,14 @@ svg { overflow: visible; }
 .pz-row .btn.small { flex: 0 0 auto; width: 44px; min-width: 44px; padding: 0; }
 .pz-row .btn.small[disabled] { opacity: .3; }
 
+/* Inicio limpio: descripción en un botón «i» */
+.cardwrap { position: relative; }
+.cardwrap .card { width: 100%; padding-right: 60px; }
+.info-btn { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: #2b2b2f; font: italic 800 22px/1 Georgia, 'Times New Roman', serif; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+.info-btn.on { background: #2b2b2f; color: #fff; }
+.info-box { margin: 6px 4px 0; padding: 12px 14px; background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 14px; font-size: 18px; line-height: 1.25; }
+.info-box[hidden] { display: none; }
+
 </style>
 </head>
 <body>
@@ -3716,7 +3724,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.8.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -3841,7 +3849,9 @@ svg { overflow: visible; }
 
   /* ---------- Bloques de la pantalla de inicio (se pueden ocultar y reordenar en Ajustes → Personalización) ---------- */
   function homeCard(nav, icon, title, desc, cls) {
-    return '<button class="card' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span>' + icon + '</span><span><span class="c-title">' + esc(title) + '</span><span class="c-desc">' + esc(desc) + '</span></span></button>';
+    return '<div class="cardwrap"><button class="card' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span>' + icon + '</span><span><span class="c-title">' + esc(title) + '</span></span></button>' +
+      '<button class="info-btn" data-info aria-label="Qué es: ' + esc(title) + '" aria-expanded="false">i</button>' +
+      '<p class="info-box" hidden>' + esc(desc) + '</p></div>';
   }
   function homeBlocks() {
     var b = [{ id: 'presets', name: 'Entrenamientos predefinidos', html: homeCard('#/presets', ICON.presets, 'Entrenamientos predefinidos', 'Los entrenos del box con el tiempo ya configurado. Toca y empieza, o crea el tuyo.', 'accent') }];
@@ -3880,6 +3890,14 @@ svg { overflow: visible; }
     var shown = blocks.filter(function (x) { return hid.indexOf(x.id) < 0; });
     (shown.length ? shown : blocks).forEach(function (x) { html += '<li>' + x.html + '</li>'; });
     app.innerHTML = html + '</ul></div>';
+    function onInfo(e) {
+      var ib = e.target.closest('[data-info]');
+      if (!ib) return;
+      var box = ib.parentNode.querySelector('.info-box'), open = box.hidden;
+      box.hidden = !open; ib.setAttribute('aria-expanded', open ? 'true' : 'false'); ib.classList.toggle('on', open);
+    }
+    app.addEventListener('click', onInfo);
+    cleanup = function () { app.removeEventListener('click', onInfo); };
     if (sess) {
       $('#resume-btn').addEventListener('click', function () {
         pending = sess.pending; resume = { elapsed: sess.elapsed, rounds: sess.rounds || 0 };

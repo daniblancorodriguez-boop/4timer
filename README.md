@@ -142,3 +142,6 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 
 ## Personalización de la pantalla de inicio (v1.8.0)
 En Ajustes → Personalización se elige qué bloques salen en el inicio (Predefinidos, cada tipo de entreno, Running, Ejercicios, Historial, Compartir) y en qué orden (▲ ▼). «Restaurar» devuelve el estado original. Se guarda en `settings.homeOrder` y `settings.homeHidden`; los bloques nuevos de futuras versiones se añaden al final.
+
+## Inicio limpio con botón «i» (v1.8.1)
+Las tarjetas del inicio ya no llevan descripción: una «i» en la esquina despliega la explicación.
