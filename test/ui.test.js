@@ -317,6 +317,26 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok(w.Sound.PRESETS.tick && w.Sound.PRESETS.long);
   console.log('Accesibilidad OK');
 
+  // ---- Personalización de la pantalla de inicio ----
+  await go('#/settings');
+  assert.ok($('#pz-list') && $$('#pz-list .pz-row').length >= 10, 'lista de bloques en Personalización');
+  const homeTitles = () => $$('.modes .c-title').map(e => e.textContent);
+  await go('#/');
+  const pzBefore = homeTitles();
+  assert.strictEqual(pzBefore[0], 'Entrenamientos predefinidos');
+  await go('#/settings');
+  $('[data-pz-mv="presets"][data-d="1"]').click();
+  $('[data-pz="history"]').checked = false; $('[data-pz="history"]').dispatchEvent(new w.Event('change', { bubbles: true }));
+  await go('#/');
+  const pzAfter = homeTitles();
+  assert.strictEqual(pzAfter[1], 'Entrenamientos predefinidos', 'el bloque se movió');
+  assert.ok(!pzAfter.includes('Historial') && pzAfter.length === pzBefore.length - 1, 'Historial oculto');
+  await go('#/settings');
+  $('#pz-reset').click();
+  await go('#/');
+  assert.strictEqual(JSON.stringify(homeTitles()), JSON.stringify(pzBefore), 'restaurar devuelve el orden original');
+  console.log('Personalización OK');
+
   // ---- Migración: datos de la versión anterior (solo texto) ----
   const old = { presets: [
     { id: 'p2', name: 'viejo', mode: 'amrap', cfg: { dur: 1200 }, desc: 'x' },

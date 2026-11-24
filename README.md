@@ -139,3 +139,6 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 - **Esfera circular** (por defecto): círculo naranja con el tiempo y las rondas dentro y 60 rayas finas que se consumen al ritmo del reloj (por pantalla de preparación, intervalo/bloque, time cap, o cada minuto en For Time sin cap). **Esfera clásica** en Ajustes → Reloj.
 - Al pulsar «Empezar» se abre el reloj parado y hay que pulsar **INICIAR** (suena un «boop»). Reiniciar vuelve a esa espera.
 - **Reloj grande**: solo reloj y rondas a pantalla completa y en horizontal (pantalla completa + bloqueo de orientación si el móvil lo permite; si no, se gira por CSS). Tocar las rondas suma 1 (modos manuales). ✕ para cerrar.
+
+## Personalización de la pantalla de inicio (v1.8.0)
+En Ajustes → Personalización se elige qué bloques salen en el inicio (Predefinidos, cada tipo de entreno, Running, Ejercicios, Historial, Compartir) y en qué orden (▲ ▼). «Restaurar» devuelve el estado original. Se guarda en `settings.homeOrder` y `settings.homeHidden`; los bloques nuevos de futuras versiones se añaden al final.
