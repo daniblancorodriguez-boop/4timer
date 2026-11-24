@@ -148,3 +148,6 @@ Las tarjetas del inicio ya no llevan descripción: una «i» en la esquina despl
 
 ## Tema fino (v1.9.0)
 Interfaz más fina: letra de peso medio y recta (los pesos 700/800 se sirven con los archivos 500/600), tarjetas oscuras con línea fina e iconos de color de marca, botones y controles más pequeños, trazo de iconos de 1,6. Fuentes nuevas: `barlow-condensed-latin-400/500-normal.woff2` (en la caché sin conexión).
+
+## Nuevo entreno Partners (v1.9.1)
+«B · For Time partner (TC 20')»: 120/120, 80/80 y 40/40 de Cal bike y American swing, en parejas.

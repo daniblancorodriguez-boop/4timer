@@ -63,7 +63,12 @@
         X('Formato: parejas'),
         X('Ronda 1'), L([ex('sled-push', '10')]), L([ex('ski', '300 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '30')]),
         X('Ronda 2'), L([ex('sled-push', '8')]), L([ex('ski', '600 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '40')]),
-        X('Ronda 3'), L([ex('sled-push', '6')]), L([ex('ski', '900 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '50')])] }
+        X('Ronda 3'), L([ex('sled-push', '6')]), L([ex('ski', '900 m')]), L([ex('db-snatch', '16')]), L([ex('wall-balls', '50')])] },
+      { id: 'p19', name: "B · For Time partner (TC 20') · Cal bike / American swing", mode: 'fortime', cfg: { cap: 1200 }, numbered: false, lines: [
+        X('Formato: parejas'),
+        L([ex('cal-bike', '120')]), L([ex('american-swing', '120')]),
+        L([ex('cal-bike', '80')]), L([ex('american-swing', '80')]),
+        L([ex('cal-bike', '40')]), L([ex('american-swing', '40')])] }
     ];
   }
 
