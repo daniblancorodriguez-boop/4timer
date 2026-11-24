@@ -1,7 +1,10 @@
-@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-style: normal; font-display: swap; src: url('../fonts/barlow-condensed-latin-600-normal.woff2') format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal; font-display: swap; src: url('../fonts/barlow-condensed-latin-700-normal.woff2') format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-style: italic; font-display: swap; src: url('../fonts/barlow-condensed-latin-700-italic.woff2') format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-style: italic; font-display: swap; src: url('../fonts/barlow-condensed-latin-800-italic.woff2') format('woff2'); }
+/* Tema fino: los pesos pesados de la app se sirven con los archivos más ligeros (letra recta, sin cursiva gruesa) */
+@font-face { font-family: 'Barlow Condensed'; font-weight: 400; font-style: normal; font-display: swap; src: url('../fonts/barlow-condensed-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-style: normal; font-display: swap; src: url('../fonts/barlow-condensed-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal; font-display: swap; src: url('../fonts/barlow-condensed-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-style: italic; font-display: swap; src: url('../fonts/barlow-condensed-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-style: italic; font-display: swap; src: url('../fonts/barlow-condensed-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 900; font-style: italic; font-display: swap; src: url('../fonts/barlow-condensed-latin-700-italic.woff2') format('woff2'); }
 
 :root {
   --bg: #050506;
@@ -500,3 +503,51 @@ svg { overflow: visible; }
 .info-btn.on { background: #2b2b2f; color: #fff; }
 .info-box { margin: 6px 4px 0; padding: 12px 14px; background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 14px; font-size: 18px; line-height: 1.25; }
 .info-box[hidden] { display: none; }
+
+/* ===== Tema fino (v2): tarjetas oscuras con línea fina, trazos finos, tamaños contenidos ===== */
+.wordmark { font-weight: 900; font-size: 30px; letter-spacing: -0.3px; }
+.wordmark .four { -webkit-text-stroke: 1.5px var(--orange); }
+.title { font-size: 26px; letter-spacing: .2px; }
+.icon-btn { width: 42px; height: 42px; border-radius: 12px; }
+.icon-btn svg { width: 22px; height: 22px; stroke-width: 1.6; }
+.gym-logo.round { height: 40px; width: 40px; }
+svg { stroke-width: 1.6; }
+.modes { gap: 8px; }
+.card, .card.accent { grid-template-columns: 32px 1fr; gap: 12px; min-height: 58px; padding: 8px 14px; border-radius: 14px; background: var(--panel); color: var(--chalk); border: 1px solid var(--line); }
+.card.accent { border-color: var(--orange); }
+.card.accent svg, .card.accent .c-title { color: var(--orange); }
+.card svg { width: 28px; height: 28px; stroke-width: 1.6; color: var(--orange); }
+.card .c-title { font-size: 22px; letter-spacing: .2px; line-height: 1.05; }
+.card .c-desc { font-size: 16px; color: var(--muted); }
+.card.accent .c-desc { color: var(--muted); }
+.info-btn { width: 22px; height: 22px; top: 18px; right: 14px; border-width: 1px; color: var(--muted); font: italic 500 14px/1 Georgia, serif; }
+.info-btn.on { background: var(--chalk); color: var(--ink); }
+.cardwrap .card { padding-right: 52px; }
+.info-box { font-size: 16px; padding: 10px 12px; border-radius: 12px; margin: 4px 2px 0; }
+.panel { border-radius: 14px; padding: 14px; }
+.panel h2 { font-size: 22px; }
+.lead { font-size: 18px; }
+.flabel { font-size: 17px; }
+.step button { width: 44px; height: 44px; border-radius: 12px; font-size: 24px; }
+.step output { font-size: 32px; min-width: 46px; }
+.text-in, select.text-in { min-height: 46px; border-radius: 12px; font-size: 19px; }
+.btn { min-height: 48px; padding: 0 18px; border-radius: 12px; font-size: 20px; font-style: normal; font-weight: 700; letter-spacing: .3px; }
+.btn svg { width: 22px; height: 22px; }
+.btn.small { min-height: 40px; font-size: 18px; border-radius: 10px; padding: 0 12px; }
+.btn.primary { background: transparent; color: var(--orange); border: 1px solid var(--orange); }
+.btn.primary:active { background: rgba(245, 146, 30, .15); }
+.switch { font-size: 18px; }
+.switch input { width: 46px; height: 28px; }
+.switch input::after { top: 3px; left: 3px; width: 22px; height: 22px; }
+.switch input:checked::after { transform: translateX(18px); }
+.snd .s-name { font-size: 19px; }
+.saved-item, .empty { border-radius: 14px; }
+.saved-item .si-name, .p-name { font-size: 22px; }
+.sec-h, .h-sec, .cal-title, .h-name { font-size: 22px; }
+.phase { font-size: 32px; }
+.bigline { font-size: 24px; }
+.sheet h2 { font-size: 26px; }
+.toast { border-radius: 12px; }
+.pz-row .btn.small { width: 36px; min-width: 36px; min-height: 36px; font-size: 12px; color: var(--muted); }
+.s-hint { font-size: 16px; }
+.samples .btn.small { padding: 0 10px; }

@@ -145,3 +145,6 @@ En Ajustes → Personalización se elige qué bloques salen en el inicio (Predef
 
 ## Inicio limpio con botón «i» (v1.8.1)
 Las tarjetas del inicio ya no llevan descripción: una «i» en la esquina despliega la explicación.
+
+## Tema fino (v1.9.0)
+Interfaz más fina: letra de peso medio y recta (los pesos 700/800 se sirven con los archivos 500/600), tarjetas oscuras con línea fina e iconos de color de marca, botones y controles más pequeños, trazo de iconos de 1,6. Fuentes nuevas: `barlow-condensed-latin-400/500-normal.woff2` (en la caché sin conexión).
